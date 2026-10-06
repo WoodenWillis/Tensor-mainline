@@ -5,6 +5,7 @@
  * Copyright 2026 Will
  */
 
+#include <dt-bindings/clock/google,zumapro.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 
 / {
@@ -119,6 +120,29 @@
 	psci {
 		compatible = "arm,psci-1.0";
 		method = "smc";
+	};
+
+	ext_24_5m: clock-24576000 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24576000>;
+		clock-output-names = "oscclk";
+	};
+
+	cmu_top: clock-controller@26040000 {
+		compatible = "google,zumapro-cmu-top";
+		reg = <0x0 0x26040000 0x8000>;
+		#clock-cells = <1>;
+		clocks = <&ext_24_5m>;
+		clock-names = "oscclk";
+	};
+
+	cmu_misc: clock-controller@10010000 {
+		compatible = "google,zumapro-cmu-misc";
+		reg = <0x0 0x10010000 0x8000>;
+		#clock-cells = <1>;
+		clocks = <&ext_24_5m>, <&cmu_top CLK_DOUT_CMU_MISC_NOC>;
+		clock-names = "oscclk", "bus";
 	};
 
 	reserved-memory {

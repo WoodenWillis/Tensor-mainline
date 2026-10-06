@@ -1,0 +1,33 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * Device Tree binding constants for Google Tensor G4 (zumapro) clocks.
+ *
+ * Copyright 2026 Will
+ */
+
+#ifndef _DT_BINDINGS_CLOCK_GOOGLE_ZUMAPRO_H
+#define _DT_BINDINGS_CLOCK_GOOGLE_ZUMAPRO_H
+
+/* CMU_TOP */
+#define CLK_FOUT_SHARED0_PLL	1
+#define CLK_FOUT_SHARED1_PLL	2
+#define CLK_FOUT_SHARED2_PLL	3
+#define CLK_FOUT_SHARED3_PLL	4
+#define CLK_FOUT_SPARE_PLL	5
+#define CLK_DOUT_SHARED0_DIV4	6
+#define CLK_DOUT_SHARED2_DIV2	7
+#define CLK_DOUT_SHARED3_DIV2	8
+#define CLK_MOUT_CMU_MISC_NOC	9
+#define CLK_DOUT_CMU_MISC_NOC	10
+#define CLK_GOUT_CMU_MISC_NOC	11
+#define CLKS_NR_TOP		(CLK_GOUT_CMU_MISC_NOC + 1)
+
+/* CMU_MISC */
+#define CLK_MOUT_MISC_NOC_USER		1
+#define CLK_DOUT_MISC_NOCP		2
+#define CLK_GOUT_MISC_MCT_PCLK		3
+#define CLK_GOUT_MISC_WDT_CL0_PCLK	4
+#define CLK_GOUT_MISC_WDT_CL1_PCLK	5
+#define CLKS_NR_MISC			(CLK_GOUT_MISC_WDT_CL1_PCLK + 1)
+
+#endif /* _DT_BINDINGS_CLOCK_GOOGLE_ZUMAPRO_H */
