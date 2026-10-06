@@ -15,6 +15,19 @@
 	interrupt-parent = <&gic>;
 
 	aliases {
+		pinctrl0 = &pinctrl_alive;
+		pinctrl1 = &pinctrl_custom_alive;
+		pinctrl2 = &pinctrl_far_alive;
+		pinctrl3 = &pinctrl_gsacore0;
+		pinctrl4 = &pinctrl_gsacore1;
+		pinctrl5 = &pinctrl_gsacore2;
+		pinctrl6 = &pinctrl_gsacore3;
+		pinctrl7 = &pinctrl_gsactrl;
+		pinctrl8 = &pinctrl_hsi1;
+		pinctrl9 = &pinctrl_hsi2;
+		pinctrl10 = &pinctrl_hsi2ufs;
+		pinctrl11 = &pinctrl_peric0;
+		pinctrl12 = &pinctrl_peric1;
 		serial0 = &serial_0;
 	};
 
@@ -288,4 +301,84 @@
 		reg-io-width = <4>;
 		interrupts = <GIC_SPI 641 IRQ_TYPE_LEVEL_HIGH 0>;
 	};
+
+	pinctrl_alive: pinctrl@154d0000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x154d0000 0x1000>;
+		status = "disabled";
+	};
+
+	pinctrl_custom_alive: pinctrl@15060000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x15060000 0x1000>;
+		status = "disabled";
+	};
+
+	pinctrl_far_alive: pinctrl@154e0000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x154e0000 0x1000>;
+		status = "disabled";
+	};
+
+	pinctrl_gsacore0: pinctrl@16280000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x16280000 0x1000>;
+		status = "disabled";
+	};
+
+	pinctrl_gsacore1: pinctrl@16290000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x16290000 0x1000>;
+		status = "disabled";
+	};
+
+	pinctrl_gsacore2: pinctrl@162a0000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x162a0000 0x1000>;
+		status = "disabled";
+	};
+
+	pinctrl_gsacore3: pinctrl@162b0000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x162b0000 0x1000>;
+		status = "disabled";
+	};
+
+	pinctrl_gsactrl: pinctrl@16140000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x16140000 0x1000>;
+		status = "disabled";
+	};
+
+	pinctrl_hsi1: pinctrl@12040000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x12040000 0x1000>;
+		interrupts = <GIC_SPI 413 IRQ_TYPE_LEVEL_HIGH 0>;
+	};
+
+	pinctrl_hsi2: pinctrl@13040000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x13040000 0x1000>;
+		interrupts = <GIC_SPI 432 IRQ_TYPE_LEVEL_HIGH 0>;
+	};
+
+	pinctrl_hsi2ufs: pinctrl@13060000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x13060000 0x1000>;
+		interrupts = <GIC_SPI 433 IRQ_TYPE_LEVEL_HIGH 0>;
+	};
+
+	pinctrl_peric0: pinctrl@10840000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x10840000 0x1000>;
+		interrupts = <GIC_SPI 634 IRQ_TYPE_LEVEL_HIGH 0>;
+	};
+
+	pinctrl_peric1: pinctrl@10c40000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x10c40000 0x1000>;
+		interrupts = <GIC_SPI 649 IRQ_TYPE_LEVEL_HIGH 0>;
+	};
 };
+
+#include "zumapro-pinctrl.dtsi"
