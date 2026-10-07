@@ -2622,6 +2622,9 @@ static const struct platform_device_id s3c24xx_serial_driver_ids[] = {
 	}, {
 		.name		= "exynos8895-uart",
 		.driver_data	= (kernel_ulong_t)EXYNOS8895_SERIAL_DRV_DATA,
+	}, {
+		.name		= "exynos-uart",
+		.driver_data	= (kernel_ulong_t)EXYNOS4210_SERIAL_DRV_DATA,
 	},
 	{ },
 };
@@ -2647,8 +2650,11 @@ static const struct of_device_id s3c24xx_uart_dt_match[] = {
 		.data = GS101_SERIAL_DRV_DATA },
 	{ .compatible = "samsung,exynos8895-uart",
 		.data = EXYNOS8895_SERIAL_DRV_DATA },
+	{ .compatible = "samsung,exynos-uart",
+		.data = EXYNOS4210_SERIAL_DRV_DATA },
 	{},
 };
+
 MODULE_DEVICE_TABLE(of, s3c24xx_uart_dt_match);
 #endif
 
@@ -2812,12 +2818,20 @@ static int __init s5pv210_early_console_setup(struct earlycon_device *device,
 
 OF_EARLYCON_DECLARE(s5pv210, "samsung,s5pv210-uart",
 			s5pv210_early_console_setup);
-OF_EARLYCON_DECLARE(exynos4210, "samsung,exynos4210-uart",
-			s5pv210_early_console_setup);
 OF_EARLYCON_DECLARE(artpec8, "axis,artpec8-uart",
 			s5pv210_early_console_setup);
 OF_EARLYCON_DECLARE(exynos850, "samsung,exynos850-uart",
 			s5pv210_early_console_setup);
+
+static int __init exynos4210_early_console_setup(struct earlycon_device *device,
+			       		    const char *opt)
+{
+	device->port.iotype = UPIO_MEM32;
+
+	return s5pv210_early_console_setup(device, opt);
+}
+
+OF_EARLYCON_DECLARE(exynos4210, "samsung,exynos4210-uart", exynos4210_early_console_setup);
 
 static int __init gs101_early_console_setup(struct earlycon_device *device,
 					    const char *opt)

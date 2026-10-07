@@ -334,6 +334,9 @@
 		reg = <0x0 0x10870000 0x100>;
 		reg-io-width = <4>;
 		interrupts = <GIC_SPI 641 IRQ_TYPE_LEVEL_HIGH 0>;
+		clocks = <&cmu_peric0 CLK_GOUT_PERIC0_USI0_UART_PCLK>,
+			 <&cmu_peric0 CLK_GOUT_PERIC0_USI0_UART_IPCLK>;
+		clock-names = "uart", "clk_uart_baud0";
 	};
 
 	pinctrl_alive: pinctrl@154d0000 {
