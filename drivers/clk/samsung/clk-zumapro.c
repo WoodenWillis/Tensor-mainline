@@ -295,3 +295,77 @@ static void __init zumapro_cmu_peric0_init(struct device_node *np)
 
 CLK_OF_DECLARE(zumapro_cmu_peric0, "google,zumapro-cmu-peric0",
 	       zumapro_cmu_peric0_init);
+
+/* ---- CMU_HSI2 ------------------------------------------------------------ */
+
+/* Register Offset definitions for CMU_HSI2 (0x13000000) */
+#define PLL_CON0_MUX_CLKCMU_HSI2_NOC_USER				0x0610
+#define PLL_CON0_MUX_CLKCMU_HSI2_UFS_EMBD_USER				0x0630
+#define CLK_CON_GAT_GOUT_BLK_HSI2_UID_QE_UFS_EMBD_HSI2_IPCLKPORT_ACLK	0x20cc
+#define CLK_CON_GAT_GOUT_BLK_HSI2_UID_QE_UFS_EMBD_HSI2_IPCLKPORT_PCLK	0x20d0
+#define CLK_CON_GAT_GOUT_BLK_HSI2_UID_SYSREG_HSI2_IPCLKPORT_PCLK		0x20e8
+#define CLK_CON_GAT_GOUT_BLK_HSI2_UID_UFS_EMBD_IPCLKPORT_I_ACLK		0x210c
+#define CLK_CON_GAT_GOUT_BLK_HSI2_UID_UFS_EMBD_IPCLKPORT_I_CLK_UNIPRO	0x2110
+#define CLK_CON_GAT_GOUT_BLK_HSI2_UID_UFS_EMBD_IPCLKPORT_I_FMP_CLK	0x2114
+
+static const unsigned long hsi2_clk_regs[] __initconst = {
+	PLL_CON0_MUX_CLKCMU_HSI2_NOC_USER,
+	PLL_CON0_MUX_CLKCMU_HSI2_UFS_EMBD_USER,
+	CLK_CON_GAT_GOUT_BLK_HSI2_UID_QE_UFS_EMBD_HSI2_IPCLKPORT_ACLK,
+	CLK_CON_GAT_GOUT_BLK_HSI2_UID_QE_UFS_EMBD_HSI2_IPCLKPORT_PCLK,
+	CLK_CON_GAT_GOUT_BLK_HSI2_UID_SYSREG_HSI2_IPCLKPORT_PCLK,
+	CLK_CON_GAT_GOUT_BLK_HSI2_UID_UFS_EMBD_IPCLKPORT_I_ACLK,
+	CLK_CON_GAT_GOUT_BLK_HSI2_UID_UFS_EMBD_IPCLKPORT_I_CLK_UNIPRO,
+	CLK_CON_GAT_GOUT_BLK_HSI2_UID_UFS_EMBD_IPCLKPORT_I_FMP_CLK,
+};
+
+PNAME(mout_hsi2_noc_user_p) = { "oscclk", "dout_cmu_hsi2_noc" };
+PNAME(mout_hsi2_ufs_embd_user_p) = { "oscclk", "dout_cmu_hsi2_ufs_embd" };
+
+static const struct samsung_mux_clock hsi2_mux_clks[] __initconst = {
+	MUX(CLK_MOUT_HSI2_NOC_USER, "mout_hsi2_noc_user", mout_hsi2_noc_user_p,
+	    PLL_CON0_MUX_CLKCMU_HSI2_NOC_USER, 4, 1),
+	MUX(CLK_MOUT_HSI2_UFS_EMBD_USER, "mout_hsi2_ufs_embd_user",
+	    mout_hsi2_ufs_embd_user_p, PLL_CON0_MUX_CLKCMU_HSI2_UFS_EMBD_USER,
+	    4, 1),
+};
+
+static const struct samsung_gate_clock hsi2_gate_clks[] __initconst = {
+	GATE(CLK_GOUT_HSI2_UFS_EMBD_I_ACLK, "gout_hsi2_ufs_embd_i_aclk",
+	     "mout_hsi2_noc_user",
+	     CLK_CON_GAT_GOUT_BLK_HSI2_UID_UFS_EMBD_IPCLKPORT_I_ACLK, 21, 0, 0),
+	GATE(CLK_GOUT_HSI2_UFS_EMBD_I_CLK_UNIPRO, "gout_hsi2_ufs_embd_i_clk_unipro",
+	     "mout_hsi2_ufs_embd_user",
+	     CLK_CON_GAT_GOUT_BLK_HSI2_UID_UFS_EMBD_IPCLKPORT_I_CLK_UNIPRO, 21, 0, 0),
+	GATE(CLK_GOUT_HSI2_UFS_EMBD_I_FMP_CLK, "gout_hsi2_ufs_embd_i_fmp_clk",
+	     "mout_hsi2_noc_user",
+	     CLK_CON_GAT_GOUT_BLK_HSI2_UID_UFS_EMBD_IPCLKPORT_I_FMP_CLK, 21, 0, 0),
+	GATE(CLK_GOUT_HSI2_QE_UFS_EMBD_HSI2_ACLK, "gout_hsi2_qe_ufs_embd_hsi2_aclk",
+	     "mout_hsi2_noc_user",
+	     CLK_CON_GAT_GOUT_BLK_HSI2_UID_QE_UFS_EMBD_HSI2_IPCLKPORT_ACLK, 21, 0, 0),
+	GATE(CLK_GOUT_HSI2_QE_UFS_EMBD_HSI2_PCLK, "gout_hsi2_qe_ufs_embd_hsi2_pclk",
+	     "mout_hsi2_noc_user",
+	     CLK_CON_GAT_GOUT_BLK_HSI2_UID_QE_UFS_EMBD_HSI2_IPCLKPORT_PCLK, 21, 0, 0),
+	GATE(CLK_GOUT_HSI2_SYSREG_HSI2_PCLK, "gout_hsi2_sysreg_hsi2_pclk",
+	     "mout_hsi2_noc_user",
+	     CLK_CON_GAT_GOUT_BLK_HSI2_UID_SYSREG_HSI2_IPCLKPORT_PCLK, 21, 0, 0),
+};
+
+static const struct samsung_cmu_info hsi2_cmu_info __initconst = {
+	.mux_clks		= hsi2_mux_clks,
+	.nr_mux_clks		= ARRAY_SIZE(hsi2_mux_clks),
+	.gate_clks		= hsi2_gate_clks,
+	.nr_gate_clks		= ARRAY_SIZE(hsi2_gate_clks),
+	.nr_clk_ids		= CLKS_NR_HSI2,
+	.clk_regs		= hsi2_clk_regs,
+	.nr_clk_regs		= ARRAY_SIZE(hsi2_clk_regs),
+	.clk_name		= "noc",
+};
+
+static void __init zumapro_cmu_hsi2_init(struct device_node *np)
+{
+	exynos_arm64_register_cmu(NULL, np, &hsi2_cmu_info);
+}
+
+CLK_OF_DECLARE(zumapro_cmu_hsi2, "google,zumapro-cmu-hsi2",
+	       zumapro_cmu_hsi2_init);
