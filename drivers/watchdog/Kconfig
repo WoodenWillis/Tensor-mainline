@@ -613,17 +613,6 @@ config S3C2410_WATCHDOG
 	  The driver can be built as a module by choosing M, and will
 	  be called s3c2410_wdt.
 
-config ZUMA_WDT_DISABLE
-	tristate "Google Zuma/Zumapro watchdog disable shim"
-	depends on ARCH_EXYNOS || COMPILE_TEST
-	help
-	  Minimal bring-up driver that disables the bootloader-armed cluster
-	  watchdog on Google Tensor G3/G4 (zuma/zumapro) by clearing WTCON,
-	  avoiding resets while the full watchdog stack is not yet supported.
-
-	  Choose Y/M only for zuma/zumapro bring-up. The driver can be built
-	  as a module and will be called zuma_wdt_disable.
-
 config SA1100_WATCHDOG
 	tristate "SA1100/PXA2xx watchdog"
 	depends on ARCH_SA1100 || ARCH_PXA || COMPILE_TEST
