@@ -494,6 +494,15 @@ struct regmap_irq_chip_data *sec_irq_init(struct sec_pmic_dev *sec_pmic)
 	case S2MPG10:
 	case S2MPG11:
 		return sec_irq_init_s2mpg1x(sec_pmic);
+	case S2MPG14:
+	case S2MPG15:
+		/*
+		 * TODO(will): s2mpg14/15 route interrupts through the I3C-IBI
+		 * VGPIO monitor (0x15500000) + SYSREG_VGPIO2AP (0x15090000),
+		 * not a PMIC status register, so the regmap_irq chained model
+		 * does not apply. Run without PMIC interrupts for now.
+		 */
+		return NULL;
 	case S2MPS11X:
 		sec_irq_chip = &s2mps11_irq_chip;
 		break;

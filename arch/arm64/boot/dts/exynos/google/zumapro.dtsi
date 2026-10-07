@@ -179,6 +179,14 @@
 			#clock-cells = <1>;
 			mboxes = <&ap2apm_mailbox>;
 			shmem = <&apm_sram>;
+
+			s2mpg14_pmic: pmic-1 {
+				compatible = "samsung,s2mpg14-pmic";
+			};
+
+			s2mpg15_pmic: pmic-2 {
+				compatible = "samsung,s2mpg15-pmic";
+			};
 		};
 	};
 

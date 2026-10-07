@@ -493,9 +493,15 @@ static int sec_pmic_acpm_probe(struct platform_device *pdev)
 	if (IS_ERR(acpm))
 		return dev_err_probe(dev, PTR_ERR(acpm), "failed to get acpm\n");
 
-	irq = platform_get_irq(pdev, 0);
-	if (irq < 0)
+	/*
+	 * The interrupt is optional: s2mpg14/15 deliver via the I3C-IBI VGPIO
+	 * path rather than a wired AP IRQ, and have no regmap_irq chip yet.
+	 */
+	irq = platform_get_irq_optional(pdev, 0);
+	if (irq < 0 && irq != -ENXIO)
 		return irq;
+	if (irq < 0)
+		irq = 0;
 
 	shared_ctx = devm_kzalloc(dev, sizeof(*shared_ctx), GFP_KERNEL);
 	if (!shared_ctx)
