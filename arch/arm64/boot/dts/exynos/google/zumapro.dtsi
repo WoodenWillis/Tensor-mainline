@@ -155,6 +155,16 @@
 		clock-names = "oscclk", "noc", "ip";
 	};
 
+	cmu_hsi2: clock-controller@13000000 {
+		compatible = "google,zumapro-cmu-hsi2";
+		reg = <0x0 0x13000000 0x8000>;
+		#clock-cells = <1>;
+		clocks = <&ext_24_5m>,
+			 <&cmu_top CLK_DOUT_CMU_HSI2_NOC>,
+			 <&cmu_top CLK_DOUT_CMU_HSI2_UFS_EMBD>;
+		clock-names = "oscclk", "noc", "ufs_embd";
+	};
+
 	reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <1>;
