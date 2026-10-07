@@ -129,6 +129,14 @@
 		clock-output-names = "oscclk";
 	};
 
+	apm_mailbox_pclk: clock-apm-mailbox {
+		/* TODO(will): replace with the real CMU_APM mailbox PCLK gate */
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24576000>;
+		clock-output-names = "apm_mailbox_pclk";
+	};
+
 	cmu_top: clock-controller@26040000 {
 		compatible = "google,zumapro-cmu-top";
 		reg = <0x0 0x26040000 0x8000>;
@@ -163,6 +171,32 @@
 			 <&cmu_top CLK_DOUT_CMU_HSI2_NOC>,
 			 <&cmu_top CLK_DOUT_CMU_HSI2_UFS_EMBD>;
 		clock-names = "oscclk", "noc", "ufs_embd";
+	};
+
+	firmware {
+		acpm_ipc: power-management {
+			compatible = "google,gs101-acpm-ipc";
+			#clock-cells = <1>;
+			mboxes = <&ap2apm_mailbox>;
+			shmem = <&apm_sram>;
+		};
+	};
+
+	apm_sram: sram@15700000 {
+		compatible = "mmio-sram";
+		reg = <0x0 0x15700000 0x58000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0x0 0x0 0x15700000 0x58000>;
+	};
+
+	ap2apm_mailbox: mailbox@15110000 {
+		compatible = "google,gs101-mbox";
+		reg = <0x0 0x15110000 0x1000>;
+		interrupts = <GIC_SPI 80 IRQ_TYPE_LEVEL_HIGH 0>;
+		clocks = <&apm_mailbox_pclk>;
+		clock-names = "pclk";
+		#mbox-cells = <0>;
 	};
 
 	reserved-memory {
