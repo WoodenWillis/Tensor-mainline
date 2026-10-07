@@ -145,6 +145,16 @@
 		clock-names = "oscclk", "bus";
 	};
 
+	cmu_peric0: clock-controller@10800000 {
+		compatible = "google,zumapro-cmu-peric0";
+		reg = <0x0 0x10800000 0x8000>;
+		#clock-cells = <1>;
+		clocks = <&ext_24_5m>,
+			 <&cmu_top CLK_DOUT_CMU_PERIC0_NOC>,
+			 <&cmu_top CLK_DOUT_CMU_PERIC0_IP>;
+		clock-names = "oscclk", "noc", "ip";
+	};
+
 	reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <1>;
