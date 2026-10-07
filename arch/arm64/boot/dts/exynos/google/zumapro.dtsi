@@ -220,11 +220,6 @@
 			no-map;
 		};
 
-		sec-dram@b6200000 {
-			reg = <0x0 0xb6200000 0x9e00000>;
-			no-map;
-		};
-
 		seclog@c3000000 {
 			reg = <0x0 0xc3000000 0x80000>;
 		};
@@ -256,11 +251,6 @@
 
 		dss-log-s2d-extract@dda20000 {
 			reg = <0x0 0xdda20000 0x600000>;
-			no-map;
-		};
-
-		sec-pt@e0000000 {
-			reg = <0x0 0xe0000000 0x3800000>;
 			no-map;
 		};
 
