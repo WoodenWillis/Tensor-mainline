@@ -173,6 +173,12 @@
 		clock-names = "oscclk", "noc", "ufs_embd";
 	};
 
+	sysreg_hsi2: syscon@13020000 {
+		compatible = "google,zumapro-hsi2-sysreg", "syscon";
+		reg = <0x0 0x13020000 0x1000>;
+		clocks = <&cmu_hsi2 CLK_GOUT_HSI2_SYSREG_HSI2_PCLK>;
+	};
+
 	firmware {
 		acpm_ipc: power-management {
 			compatible = "google,gs101-acpm-ipc";
