@@ -19,6 +19,8 @@
 #include <linux/mfd/samsung/core.h>
 #include <linux/mfd/samsung/s2mpg10.h>
 #include <linux/mfd/samsung/s2mpg11.h>
+#include <linux/mfd/samsung/s2mpg14.h>
+#include <linux/mfd/samsung/s2mpg15.h>
 #include <linux/mfd/samsung/s2mps11.h>
 #include <linux/mfd/samsung/s2mps13.h>
 #include <linux/mfd/samsung/s2mps14.h>
@@ -1375,6 +1377,200 @@ static const struct regulator_ops s2mps11_buck_ops = {
 	.enable_mask	= S2MPS11_ENABLE_MASK			\
 }
 
+/* s2mpg14-register.h REG_MINx / REG_STEPx */
+#define S2MPG14_VMIN1	200000
+#define S2MPG14_VSTEP1	6250
+#define S2MPG14_VMIN2	300000
+#define S2MPG14_VSTEP2	12500
+#define S2MPG14_VMIN3	725000
+#define S2MPG14_VSTEP3	12500
+#define S2MPG14_VMIN4	700000
+#define S2MPG14_VSTEP4	25000
+#define S2MPG14_VMIN5	1800000
+#define S2MPG14_VSTEP5	25000
+
+/* s2mpg15-register.h REG_MINx / REG_STEPx */
+#define S2MPG15_VMIN1	200000
+#define S2MPG15_VSTEP1	6250
+#define S2MPG15_VMIN2	600000
+#define S2MPG15_VSTEP2	12500
+#define S2MPG15_VMIN3	2600000
+#define S2MPG15_VSTEP3	12500
+#define S2MPG15_VMIN4	300000
+#define S2MPG15_VSTEP4	12500
+#define S2MPG15_VMIN5	725000
+#define S2MPG15_VSTEP5	12500
+#define S2MPG15_VMIN6	700000
+#define S2MPG15_VSTEP6	25000
+#define S2MPG15_VMIN7	1800000
+#define S2MPG15_VSTEP7	25000
+
+#define S2MPG1415_LDO_ENABLE_TIME	128
+#define S2MPG1415_BUCK_ENABLE_TIME	130
+
+static const struct regulator_ops s2mpg14_reg_ops[] = {
+	[S2MPG10_REGULATOR_OPS_STD] = {
+		.list_voltage		= regulator_list_voltage_linear,
+		.map_voltage		= regulator_map_voltage_linear,
+		.is_enabled		= regulator_is_enabled_regmap,
+		.enable			= regulator_enable_regmap,
+		.disable		= regulator_disable_regmap,
+		.get_voltage_sel	= regulator_get_voltage_sel_regmap,
+		.set_voltage_sel	= regulator_set_voltage_sel_regmap,
+	},
+	[S2MPG10_REGULATOR_OPS_EXTCONTROL] = {
+		.list_voltage		= regulator_list_voltage_linear,
+		.map_voltage		= regulator_map_voltage_linear,
+		.enable			= s2mpg10_regulator_enable_nop,
+		.get_voltage_sel	= regulator_get_voltage_sel_regmap,
+		.set_voltage_sel	= regulator_set_voltage_sel_regmap,
+	}
+};
+
+#define regulator_desc_s2mpg1415(_name, _id, _min, _step, _n, _vsel_reg,	\
+				 _en_reg, _en_mask, _en_time)			\
+	[_id] = {								\
+		.desc = {							\
+			.name		= _name,				\
+			.of_match	= of_match_ptr(_name),			\
+			.regulators_node = of_match_ptr("regulators"),		\
+			.of_parse_cb	= s2mpg10_of_parse_cb,			\
+			.id		= _id,					\
+			.ops		= &s2mpg14_reg_ops[0],			\
+			.type		= REGULATOR_VOLTAGE,			\
+			.owner		= THIS_MODULE,				\
+			.min_uV		= _min,					\
+			.uV_step	= _step,				\
+			.n_voltages	= _n,					\
+			.vsel_reg	= _vsel_reg,				\
+			.vsel_mask	= (_n) - 1,				\
+			.enable_reg	= _en_reg,				\
+			.enable_mask	= _en_mask,				\
+			.enable_time	= _en_time,				\
+		},							\
+	}
+
+#define s2mpg14_ldo(_num, _grp, _n, _vsel_reg, _en_reg, _en_mask)	\
+	regulator_desc_s2mpg1415("ldo" #_num "m", S2MPG14_LDO##_num,	\
+		S2MPG14_VMIN##_grp, S2MPG14_VSTEP##_grp, _n,		\
+		S2MPG14_PMIC_##_vsel_reg, S2MPG14_PMIC_##_en_reg,	\
+		_en_mask, S2MPG1415_LDO_ENABLE_TIME)
+
+#define s2mpg14_buck(_num, _vsel_reg, _en_mask)				\
+	regulator_desc_s2mpg1415("buck" #_num "m", S2MPG14_BUCK##_num,	\
+		S2MPG14_VMIN1, S2MPG14_VSTEP1, 256,			\
+		S2MPG14_PMIC_##_vsel_reg, S2MPG14_PMIC_B##_num##M_CTRL,	\
+		_en_mask, S2MPG1415_BUCK_ENABLE_TIME)
+
+#define s2mpg15_ldo(_num, _grp, _n, _en_reg, _en_mask)			\
+	regulator_desc_s2mpg1415("ldo" #_num "s", S2MPG15_LDO##_num,	\
+		S2MPG15_VMIN##_grp, S2MPG15_VSTEP##_grp, _n,		\
+		S2MPG15_PMIC_L##_num##S_CTRL, S2MPG15_PMIC_##_en_reg,	\
+		_en_mask, S2MPG1415_LDO_ENABLE_TIME)
+
+#define s2mpg15_buck(_num, _grp, _vsel_reg, _en_mask)			\
+	regulator_desc_s2mpg1415("buck" #_num "s", S2MPG15_BUCK##_num,	\
+		S2MPG15_VMIN##_grp, S2MPG15_VSTEP##_grp, 256,		\
+		S2MPG15_PMIC_##_vsel_reg, S2MPG15_PMIC_B##_num##S_CTRL,	\
+		_en_mask, S2MPG1415_BUCK_ENABLE_TIME)
+
+static const struct s2mpg10_regulator_desc s2mpg14_regulators[] = {
+	s2mpg14_ldo(1, 2, 128, L1M_CTRL, L1M_CTRL, BIT(7)),
+	s2mpg14_ldo(2, 4, 64, L2M_CTRL, L2M_CTRL, BIT(7)),
+	s2mpg14_ldo(3, 2, 128, L3M_CTRL1, L3M_CTRL1, BIT(7)),
+	s2mpg14_ldo(4, 5, 64, L4M_CTRL, L4M_CTRL, BIT(7)),
+	s2mpg14_ldo(5, 4, 64, L5M_CTRL, L5M_CTRL, GENMASK(7, 6)),
+	s2mpg14_ldo(6, 3, 64, L6M_CTRL, L6M_CTRL, GENMASK(7, 6)),
+	s2mpg14_ldo(7, 5, 64, L7M_CTRL, L7M_CTRL, BIT(7)),
+	s2mpg14_ldo(8, 2, 128, L8M_CTRL, LDO_CTRL1, GENMASK(1, 0)),
+	s2mpg14_ldo(9, 3, 64, L9M_CTRL, L9M_CTRL, GENMASK(7, 6)),
+	s2mpg14_ldo(10, 3, 64, L10M_CTRL, L10M_CTRL, BIT(7)),
+	s2mpg14_ldo(11, 2, 128, L11M_CTRL1, LDO_CTRL1, GENMASK(3, 2)),
+	s2mpg14_ldo(12, 2, 128, L12M_CTRL1, LDO_CTRL1, GENMASK(5, 4)),
+	s2mpg14_ldo(13, 2, 128, L13M_CTRL1, LDO_CTRL1, GENMASK(7, 6)),
+	s2mpg14_ldo(14, 5, 64, L14M_CTRL, L14M_CTRL, BIT(7)),
+	s2mpg14_ldo(15, 2, 128, L15M_CTRL1, LDO_CTRL2, GENMASK(1, 0)),
+	s2mpg14_ldo(16, 3, 64, L16M_CTRL, L16M_CTRL, GENMASK(7, 6)),
+	s2mpg14_ldo(17, 2, 128, L17M_CTRL1, LDO_CTRL2, GENMASK(3, 2)),
+	s2mpg14_ldo(18, 3, 64, L18M_CTRL, L18M_CTRL, GENMASK(7, 6)),
+	s2mpg14_ldo(19, 5, 64, L19M_CTRL, L19M_CTRL, GENMASK(7, 6)),
+	s2mpg14_ldo(20, 4, 64, L20M_CTRL, L20M_CTRL, GENMASK(7, 6)),
+	s2mpg14_ldo(21, 5, 64, L21M_CTRL, L21M_CTRL, BIT(7)),
+	s2mpg14_ldo(22, 3, 64, L22M_CTRL, L22M_CTRL, BIT(7)),
+	s2mpg14_ldo(23, 4, 64, L23M_CTRL, L23M_CTRL, GENMASK(7, 6)),
+	s2mpg14_ldo(24, 4, 64, L24M_CTRL, L24M_CTRL, BIT(7)),
+	s2mpg14_ldo(25, 4, 64, L25M_CTRL, L25M_CTRL, BIT(7)),
+	s2mpg14_buck(1, B1M_OUT1, GENMASK(7, 6)),
+	s2mpg14_buck(2, B2M_OUT1, GENMASK(7, 6)),
+	s2mpg14_buck(3, B3M_OUT1, GENMASK(7, 6)),
+	s2mpg14_buck(4, B4M_OUT1, GENMASK(7, 6)),
+	s2mpg14_buck(5, B5M_OUT1, GENMASK(7, 6)),
+	s2mpg14_buck(6, B6M_OUT1, BIT(7)),
+	s2mpg14_buck(7, B7M_OUT0, GENMASK(7, 6)),
+	s2mpg14_buck(8, B8M_OUT1, BIT(7)),
+	s2mpg14_buck(9, B9M_OUT1, GENMASK(7, 6)),
+};
+
+static const struct s2mpg10_regulator_desc s2mpg15_regulators[] = {
+	s2mpg15_ldo(1, 4, 128, LDO_CTRL1, GENMASK(1, 0)),
+	s2mpg15_ldo(2, 4, 64, LDO_CTRL1, GENMASK(3, 2)),
+	s2mpg15_ldo(3, 5, 64, L3S_CTRL, GENMASK(7, 6)),
+	s2mpg15_ldo(4, 6, 64, L4S_CTRL, BIT(7)),
+	s2mpg15_ldo(5, 7, 64, L5S_CTRL, BIT(7)),
+	s2mpg15_ldo(6, 7, 64, L6S_CTRL, BIT(7)),
+	s2mpg15_ldo(7, 6, 64, L7S_CTRL, BIT(7)),
+	s2mpg15_ldo(8, 7, 64, L8S_CTRL, BIT(7)),
+	s2mpg15_ldo(9, 5, 64, L9S_CTRL, BIT(7)),
+	s2mpg15_ldo(10, 6, 64, L10S_CTRL, BIT(7)),
+	s2mpg15_ldo(11, 6, 64, L11S_CTRL, BIT(7)),
+	s2mpg15_ldo(12, 6, 64, L12S_CTRL, BIT(7)),
+	s2mpg15_ldo(13, 6, 64, L13S_CTRL, GENMASK(7, 6)),
+	s2mpg15_ldo(14, 6, 64, L14S_CTRL, BIT(7)),
+	s2mpg15_ldo(15, 7, 64, L15S_CTRL, BIT(7)),
+	s2mpg15_ldo(16, 7, 64, L16S_CTRL, BIT(7)),
+	s2mpg15_ldo(17, 6, 64, L17S_CTRL, BIT(7)),
+	s2mpg15_ldo(18, 7, 64, L18S_CTRL, GENMASK(7, 6)),
+	s2mpg15_ldo(19, 6, 64, L19S_CTRL, GENMASK(7, 6)),
+	s2mpg15_ldo(20, 6, 64, L20S_CTRL, GENMASK(7, 6)),
+	s2mpg15_ldo(21, 5, 64, L21S_CTRL, BIT(7)),
+	s2mpg15_ldo(22, 6, 64, L22S_CTRL, BIT(7)),
+	s2mpg15_ldo(23, 4, 128, LDO_CTRL1, GENMASK(5, 4)),
+	s2mpg15_ldo(24, 5, 64, L24S_CTRL, GENMASK(7, 6)),
+	s2mpg15_ldo(25, 7, 64, L25S_CTRL, BIT(7)),
+	s2mpg15_ldo(26, 7, 64, L26S_CTRL, BIT(7)),
+	s2mpg15_ldo(27, 6, 64, L27S_CTRL, GENMASK(7, 6)),
+	s2mpg15_ldo(28, 7, 64, L28S_CTRL, BIT(7)),
+	s2mpg15_ldo(29, 6, 64, L29S_CTRL, BIT(7)),
+	s2mpg15_buck(1, 1, B1S_OUT1, GENMASK(7, 6)),
+	s2mpg15_buck(2, 1, B2S_OUT1, GENMASK(7, 6)),
+	s2mpg15_buck(3, 1, B3S_OUT1, BIT(7)),
+	s2mpg15_buck(4, 1, B4S_OUT1, BIT(7)),
+	s2mpg15_buck(5, 1, B5S_OUT1, GENMASK(7, 6)),
+	s2mpg15_buck(6, 1, B6S_OUT1, GENMASK(7, 6)),
+	s2mpg15_buck(7, 2, B7S_OUT1, BIT(7)),
+	s2mpg15_buck(8, 1, B8S_OUT1, GENMASK(7, 6)),
+	s2mpg15_buck(9, 1, B9S_OUT0, BIT(7)),
+	s2mpg15_buck(10, 1, B10S_OUT1, GENMASK(7, 6)),
+	s2mpg15_buck(11, 1, B11S_OUT1, GENMASK(7, 6)),
+	s2mpg15_buck(12, 1, B12S_OUT1, GENMASK(7, 6)),
+	regulator_desc_s2mpg1415("buckd", S2MPG15_BUCKD,
+				 S2MPG15_VMIN2, S2MPG15_VSTEP2, 256,
+				 S2MPG15_PMIC_BUCKD_OUT, S2MPG15_PMIC_BUCKD_CTRL,
+				 GENMASK(7, 6), S2MPG1415_BUCK_ENABLE_TIME),
+	regulator_desc_s2mpg1415("bucka", S2MPG15_BUCKA,
+				 S2MPG15_VMIN2, S2MPG15_VSTEP2, 256,
+				 S2MPG15_PMIC_BUCKA_OUT, S2MPG15_PMIC_BUCKA_CTRL,
+				 GENMASK(7, 6), S2MPG1415_BUCK_ENABLE_TIME),
+	regulator_desc_s2mpg1415("buckc", S2MPG15_BUCKC,
+				 S2MPG15_VMIN1, S2MPG15_VSTEP1, 256,
+				 S2MPG15_PMIC_BUCKC_OUT, S2MPG15_PMIC_BUCKC_CTRL,
+				 GENMASK(7, 6), S2MPG1415_BUCK_ENABLE_TIME),
+	regulator_desc_s2mpg1415("buckboost", S2MPG15_BUCKBOOST,
+				 S2MPG15_VMIN3, S2MPG15_VSTEP3, 128,
+				 S2MPG15_PMIC_BB_OUT, S2MPG15_PMIC_BB_CTRL,
+				 GENMASK(7, 6), S2MPG1415_BUCK_ENABLE_TIME),
+};
+
 static const struct regulator_desc s2mps11_regulators[] = {
 	regulator_desc_s2mps11_ldo(1, STEP_25_MV),
 	regulator_desc_s2mps11_ldo(2, STEP_50_MV),
@@ -2187,6 +2383,16 @@ static int s2mps11_pmic_probe(struct platform_device *pdev)
 		s2mpg1x_regulators = s2mpg11_regulators;
 		BUILD_BUG_ON(ARRAY_SIZE(s2mpg11_regulators) > S2MPS_REGULATOR_MAX);
 		break;
+	case S2MPG14:
+		rdev_num = ARRAY_SIZE(s2mpg14_regulators);
+		s2mpg1x_regulators = s2mpg14_regulators;
+		BUILD_BUG_ON(ARRAY_SIZE(s2mpg14_regulators) > S2MPS_REGULATOR_MAX);
+		break;
+	case S2MPG15:
+		rdev_num = ARRAY_SIZE(s2mpg15_regulators);
+		s2mpg1x_regulators = s2mpg15_regulators;
+		BUILD_BUG_ON(ARRAY_SIZE(s2mpg15_regulators) > S2MPS_REGULATOR_MAX);
+		break;
 	case S2MPS11X:
 		rdev_num = ARRAY_SIZE(s2mps11_regulators);
 		regulators = s2mps11_regulators;
@@ -2268,6 +2474,8 @@ static int s2mps11_pmic_probe(struct platform_device *pdev)
 static const struct platform_device_id s2mps11_pmic_id[] = {
 	{ .name = "s2mpg10-regulator", .driver_data = S2MPG10 },
 	{ .name = "s2mpg11-regulator", .driver_data = S2MPG11 },
+	{ .name = "s2mpg14-regulator", .driver_data = S2MPG14 },
+	{ .name = "s2mpg15-regulator", .driver_data = S2MPG15 },
 	{ .name = "s2mps11-regulator", .driver_data = S2MPS11X },
 	{ .name = "s2mps13-regulator", .driver_data = S2MPS13X },
 	{ .name = "s2mps14-regulator", .driver_data = S2MPS14X },
