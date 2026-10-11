@@ -322,6 +322,22 @@ static const struct regmap_access_table gs101_pmu_wr_table = {
 	.n_no_ranges = ARRAY_SIZE(gs101_pmu_ro_registers),
 };
 
+/* TODO(will): extend as zumapro PMU consumers land */
+static const struct regmap_range zumapro_pmu_registers[] = {
+	regmap_reg_range(ZUMAPRO_PHY_CTRL_UFS, ZUMAPRO_PHY_CTRL_UFS),
+};
+
+static const struct regmap_access_table zumapro_pmu_access_table = {
+	.yes_ranges = zumapro_pmu_registers,
+	.n_yes_ranges = ARRAY_SIZE(zumapro_pmu_registers),
+};
+
+const struct exynos_pmu_data zumapro_pmu_data = {
+	.pmu_secure = true,
+	.rd_table = &zumapro_pmu_access_table,
+	.wr_table = &zumapro_pmu_access_table,
+};
+
 const struct exynos_pmu_data gs101_pmu_data = {
 	.pmu_secure = true,
 	.pmu_cpuhp = true,
