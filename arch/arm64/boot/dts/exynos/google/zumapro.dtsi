@@ -179,6 +179,43 @@
 		clocks = <&cmu_hsi2 CLK_GOUT_HSI2_SYSREG_HSI2_PCLK>;
 	};
 
+	ufs_0: ufs@13200000 {
+		compatible = "google,zumapro-ufs";
+		reg = <0x0 0x13200000 0x200>,
+		      <0x0 0x13201100 0x2000>,
+		      <0x0 0x13280000 0x8000>,
+		      <0x0 0x132a0000 0xa014>;
+		reg-names = "hci", "vs_hci", "unipro", "ufsp";
+		interrupts = <GIC_SPI 466 IRQ_TYPE_LEVEL_HIGH 0>;
+		clocks = <&cmu_hsi2 CLK_GOUT_HSI2_UFS_EMBD_I_ACLK>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_UFS_EMBD_I_CLK_UNIPRO>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_UFS_EMBD_I_FMP_CLK>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_QE_UFS_EMBD_HSI2_ACLK>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_QE_UFS_EMBD_HSI2_PCLK>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_SYSREG_HSI2_PCLK>;
+		clock-names = "core_clk", "sclk_unipro_main", "fmp",
+			      "aclk", "pclk", "sysreg";
+		dma-coherent;
+		freq-table-hz = <0 0>, <0 0>, <0 0>, <0 0>, <0 0>, <0 0>;
+		pinctrl-0 = <&ufs_rst_n &ufs_refclk_out>;
+		pinctrl-names = "default";
+		phys = <&ufs_0_phy>;
+		phy-names = "ufs-phy";
+		samsung,sysreg = <&sysreg_hsi2 0x710>;
+		status = "disabled";
+	};
+
+	ufs_0_phy: phy@13204000 {
+		compatible = "google,zumapro-ufs-phy";
+		reg = <0x0 0x13204000 0x4000>;
+		reg-names = "phy-pma";
+		samsung,pmu-syscon = <&pmu_system_controller>;
+		#phy-cells = <0>;
+		clocks = <&ext_24_5m>;
+		clock-names = "ref_clk";
+		status = "disabled";
+	};
+
 	firmware {
 		acpm_ipc: power-management {
 			compatible = "google,gs101-acpm-ipc";
