@@ -225,10 +225,20 @@ static int exynos_ufs_shareability(struct exynos_ufs *ufs)
 	return 0;
 }
 
+static int tensor_ufs_drv_init(struct exynos_ufs *ufs)
+{
+	u32 reg;
+
+	/* set ACG to be controlled by UFS_ACG_DISABLE */
+	reg = hci_readl(ufs, HCI_IOP_ACG_DISABLE);
+	hci_writel(ufs, reg & (~HCI_IOP_ACG_DISABLE_EN), HCI_IOP_ACG_DISABLE);
+
+	return exynos_ufs_shareability(ufs);
+}
+
 static int gs101_ufs_drv_init(struct exynos_ufs *ufs)
 {
 	struct ufs_hba *hba = ufs->hba;
-	u32 reg;
 
 	/* Enable WriteBooster */
 	hba->caps |= UFSHCD_CAP_WB_EN;
@@ -236,11 +246,7 @@ static int gs101_ufs_drv_init(struct exynos_ufs *ufs)
 	/* Enable clock gating and hibern8 */
 	hba->caps |= UFSHCD_CAP_CLK_GATING | UFSHCD_CAP_HIBERN8_WITH_CLK_GATING;
 
-	/* set ACG to be controlled by UFS_ACG_DISABLE */
-	reg = hci_readl(ufs, HCI_IOP_ACG_DISABLE);
-	hci_writel(ufs, reg & (~HCI_IOP_ACG_DISABLE_EN), HCI_IOP_ACG_DISABLE);
-
-	return exynos_ufs_shareability(ufs);
+	return tensor_ufs_drv_init(ufs);
 }
 
 static int exynosauto_ufs_drv_init(struct exynos_ufs *ufs)
@@ -2010,7 +2016,7 @@ static inline u32 get_mclk_period_unipro_18(struct exynos_ufs *ufs)
 	return (16 * 1000 * 1000000UL / ufs->mclk_rate);
 }
 
-static int gs101_ufs_pre_link(struct exynos_ufs *ufs)
+static void tensor_ufs_config_pcs_lanes(struct exynos_ufs *ufs, u32 rx_cfg_2f)
 {
 	struct ufs_hba *hba = ufs->hba;
 	int i;
@@ -2020,10 +2026,6 @@ static int gs101_ufs_pre_link(struct exynos_ufs *ufs)
 				/ NSEC_PER_MSEC;
 	tx_line_reset_period = (TX_LINE_RESET_TIME * ufs->mclk_rate)
 				/ NSEC_PER_MSEC;
-
-	unipro_writel(ufs, get_mclk_period_unipro_18(ufs), COMP_CLK_PERIOD);
-
-	ufshcd_dme_set(hba, UIC_ARG_MIB(0x200), 0x40);
 
 	for_each_ufs_rx_lane(ufs, i) {
 		ufshcd_dme_set(hba, UIC_ARG_MIB_SEL(VND_RX_CLK_PRD, i),
@@ -2035,7 +2037,7 @@ static int gs101_ufs_pre_link(struct exynos_ufs *ufs)
 			       (rx_line_reset_period >> 8) & 0xFF);
 		ufshcd_dme_set(hba, UIC_ARG_MIB_SEL(VND_RX_LINERESET_VALUE0, i),
 			       (rx_line_reset_period) & 0xFF);
-		ufshcd_dme_set(hba, UIC_ARG_MIB_SEL(0x2f, i), 0x69);
+		ufshcd_dme_set(hba, UIC_ARG_MIB_SEL(0x2f, i), rx_cfg_2f);
 		ufshcd_dme_set(hba, UIC_ARG_MIB_SEL(0x84, i), 0x1);
 		ufshcd_dme_set(hba, UIC_ARG_MIB_SEL(0x25, i), 0xf6);
 	}
@@ -2054,13 +2056,28 @@ static int gs101_ufs_pre_link(struct exynos_ufs *ufs)
 		ufshcd_dme_set(hba, UIC_ARG_MIB_SEL(0x04, i), 1);
 		ufshcd_dme_set(hba, UIC_ARG_MIB_SEL(0x7F, i), 0);
 	}
+}
 
-	ufshcd_dme_set(hba, UIC_ARG_MIB(0x200), 0x0);
+static void tensor_ufs_config_cport(struct ufs_hba *hba)
+{
 	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_LOCAL_TX_LCC_ENABLE), 0x0);
 	ufshcd_dme_set(hba, UIC_ARG_MIB(N_DEVICEID), 0x0);
 	ufshcd_dme_set(hba, UIC_ARG_MIB(N_DEVICEID_VALID), 0x1);
 	ufshcd_dme_set(hba, UIC_ARG_MIB(T_PEERDEVICEID), 0x1);
 	ufshcd_dme_set(hba, UIC_ARG_MIB(T_CONNECTIONSTATE), CPORT_CONNECTED);
+}
+
+static int gs101_ufs_pre_link(struct exynos_ufs *ufs)
+{
+	struct ufs_hba *hba = ufs->hba;
+
+	unipro_writel(ufs, get_mclk_period_unipro_18(ufs), COMP_CLK_PERIOD);
+
+	ufshcd_dme_set(hba, UIC_ARG_MIB(0x200), 0x40);
+	tensor_ufs_config_pcs_lanes(ufs, 0x69);
+	ufshcd_dme_set(hba, UIC_ARG_MIB(0x200), 0x0);
+
+	tensor_ufs_config_cport(hba);
 	ufshcd_dme_set(hba, UIC_ARG_MIB(0xA006), 0x8000);
 
 	return 0;
