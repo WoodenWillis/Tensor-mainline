@@ -6,6 +6,7 @@
  */
 
 #include <dt-bindings/clock/google,zumapro.h>
+#include <dt-bindings/clock/google,zumapro-acpm.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 
 / {
@@ -177,6 +178,21 @@
 		compatible = "google,zumapro-hsi2-sysreg", "syscon";
 		reg = <0x0 0x13020000 0x1000>;
 		clocks = <&cmu_hsi2 CLK_GOUT_HSI2_SYSREG_HSI2_PCLK>;
+	};
+
+	cmu_g3d: clock-controller@1ee00000 {
+		compatible = "google,zumapro-cmu-g3d";
+		reg = <0x0 0x1ee00000 0x8000>;
+		#clock-cells = <1>;
+		clocks = <&ext_24_5m>,
+			 <&cmu_top CLK_DOUT_CMU_G3D_GLB>,
+			 <&cmu_top CLK_DOUT_CMU_G3D_NOCD>,
+			 <&cmu_top CLK_DOUT_CMU_G3D_SWITCH>,
+			 <&cmu_top CLK_DOUT_CMU_G3D_TRACE>,
+			 <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_G3D>,
+			 <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_G3DL2>;
+		clock-names = "oscclk", "glb", "nocd", "switch", "trace",
+			      "g3d", "g3dl2";
 	};
 
 	ufs_0: ufs@13200000 {
