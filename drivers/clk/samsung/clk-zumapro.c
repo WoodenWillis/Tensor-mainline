@@ -45,6 +45,18 @@
 #define CLK_CON_DIV_CLKCMU_HSI2_UFS_EMBD	0x18b0
 #define CLK_CON_GAT_GATE_CLKCMU_HSI2_NOC	0x20d8
 #define CLK_CON_GAT_GATE_CLKCMU_HSI2_UFS_EMBD	0x20e0
+#define CLK_CON_MUX_MUX_CLKCMU_G3D_GLB		0x106c
+#define CLK_CON_MUX_MUX_CLKCMU_G3D_NOCD		0x1070
+#define CLK_CON_MUX_MUX_CLKCMU_G3D_SWITCH	0x1074
+#define CLK_CON_MUX_MUX_CLKCMU_G3D_TRACE	0x1078
+#define CLK_CON_DIV_CLKCMU_G3D_GLB		0x1864
+#define CLK_CON_DIV_CLKCMU_G3D_NOCD		0x1868
+#define CLK_CON_DIV_CLKCMU_G3D_SWITCH		0x186c
+#define CLK_CON_DIV_CLKCMU_G3D_TRACE		0x1870
+#define CLK_CON_GAT_GATE_CLKCMU_G3D_GLB		0x2094
+#define CLK_CON_GAT_GATE_CLKCMU_G3D_NOCD	0x2098
+#define CLK_CON_GAT_GATE_CLKCMU_G3D_SWITCH	0x209c
+#define CLK_CON_GAT_GATE_CLKCMU_G3D_TRACE	0x20a0
 
 static const unsigned long top_clk_regs[] __initconst = {
 	PLL_LOCKTIME_PLL_SHARED0,
@@ -72,6 +84,18 @@ static const unsigned long top_clk_regs[] __initconst = {
 	CLK_CON_DIV_CLKCMU_HSI2_UFS_EMBD,
 	CLK_CON_GAT_GATE_CLKCMU_HSI2_NOC,
 	CLK_CON_GAT_GATE_CLKCMU_HSI2_UFS_EMBD,
+	CLK_CON_MUX_MUX_CLKCMU_G3D_GLB,
+	CLK_CON_MUX_MUX_CLKCMU_G3D_NOCD,
+	CLK_CON_MUX_MUX_CLKCMU_G3D_SWITCH,
+	CLK_CON_MUX_MUX_CLKCMU_G3D_TRACE,
+	CLK_CON_DIV_CLKCMU_G3D_GLB,
+	CLK_CON_DIV_CLKCMU_G3D_NOCD,
+	CLK_CON_DIV_CLKCMU_G3D_SWITCH,
+	CLK_CON_DIV_CLKCMU_G3D_TRACE,
+	CLK_CON_GAT_GATE_CLKCMU_G3D_GLB,
+	CLK_CON_GAT_GATE_CLKCMU_G3D_NOCD,
+	CLK_CON_GAT_GATE_CLKCMU_G3D_SWITCH,
+	CLK_CON_GAT_GATE_CLKCMU_G3D_TRACE,
 };
 
 static const struct samsung_pll_clock top_pll_clks[] __initconst = {
@@ -100,8 +124,25 @@ PNAME(mout_cmu_hsi2_noc_p) = { "dout_shared0_div4", "dout_shared1_div4",
 PNAME(mout_cmu_hsi2_ufs_embd_p) = { "oscclk", "dout_shared0_div4",
 				   "dout_shared2_div2", "fout_spare_pll" };
 
+PNAME(mout_cmu_g3d_glb_p) = { "dout_shared0_div2", "dout_shared1_div2",
+			     "fout_shared2_pll", "fout_shared3_pll",
+			     "dout_shared0_div3", "dout_shared1_div3",
+			     "dout_shared0_div4", "fout_spare_pll" };
+
+PNAME(mout_cmu_g3d_switch_p) = { "fout_shared2_pll", "dout_shared0_div3",
+				"fout_shared3_pll", "dout_shared1_div3",
+				"dout_shared0_div4", "dout_shared1_div4",
+				"fout_spare_pll", "fout_spare_pll" };
+
+PNAME(mout_cmu_g3d_trace_p) = { "dout_shared0_div4", "dout_shared1_div4",
+			       "dout_shared2_div2", "dout_shared3_div2" };
+
 static const struct samsung_fixed_factor_clock top_fixed_factor_clks[] __initconst = {
+	FFACTOR(CLK_DOUT_SHARED0_DIV2, "dout_shared0_div2", "fout_shared0_pll", 1, 2, 0),
+	FFACTOR(CLK_DOUT_SHARED0_DIV3, "dout_shared0_div3", "fout_shared0_pll", 1, 3, 0),
 	FFACTOR(CLK_DOUT_SHARED0_DIV4, "dout_shared0_div4", "fout_shared0_pll", 1, 4, 0),
+	FFACTOR(CLK_DOUT_SHARED1_DIV2, "dout_shared1_div2", "fout_shared1_pll", 1, 2, 0),
+	FFACTOR(CLK_DOUT_SHARED1_DIV3, "dout_shared1_div3", "fout_shared1_pll", 1, 3, 0),
 	FFACTOR(CLK_DOUT_SHARED1_DIV4, "dout_shared1_div4", "fout_shared1_pll", 1, 4, 0),
 	FFACTOR(CLK_DOUT_SHARED2_DIV2, "dout_shared2_div2", "fout_shared2_pll", 1, 2, 0),
 	FFACTOR(CLK_DOUT_SHARED3_DIV2, "dout_shared3_div2", "fout_shared3_pll", 1, 2, 0),
@@ -118,6 +159,14 @@ static const struct samsung_mux_clock top_mux_clks[] __initconst = {
 	    CLK_CON_MUX_MUX_CLKCMU_HSI2_NOC, 0, 3),
 	MUX(CLK_MOUT_CMU_HSI2_UFS_EMBD, "mout_cmu_hsi2_ufs_embd",
 	    mout_cmu_hsi2_ufs_embd_p, CLK_CON_MUX_MUX_CLKCMU_HSI2_UFS_EMBD, 0, 2),
+	MUX(CLK_MOUT_CMU_G3D_GLB, "mout_cmu_g3d_glb", mout_cmu_g3d_glb_p,
+	    CLK_CON_MUX_MUX_CLKCMU_G3D_GLB, 0, 3),
+	MUX(CLK_MOUT_CMU_G3D_NOCD, "mout_cmu_g3d_nocd", mout_cmu_g3d_glb_p,
+	    CLK_CON_MUX_MUX_CLKCMU_G3D_NOCD, 0, 3),
+	MUX(CLK_MOUT_CMU_G3D_SWITCH, "mout_cmu_g3d_switch", mout_cmu_g3d_switch_p,
+	    CLK_CON_MUX_MUX_CLKCMU_G3D_SWITCH, 0, 3),
+	MUX(CLK_MOUT_CMU_G3D_TRACE, "mout_cmu_g3d_trace", mout_cmu_g3d_trace_p,
+	    CLK_CON_MUX_MUX_CLKCMU_G3D_TRACE, 0, 2),
 };
 
 static const struct samsung_div_clock top_div_clks[] __initconst = {
@@ -131,6 +180,14 @@ static const struct samsung_div_clock top_div_clks[] __initconst = {
 	    CLK_CON_DIV_CLKCMU_HSI2_NOC, 0, 4),
 	DIV(CLK_DOUT_CMU_HSI2_UFS_EMBD, "dout_cmu_hsi2_ufs_embd",
 	    "gout_cmu_hsi2_ufs_embd", CLK_CON_DIV_CLKCMU_HSI2_UFS_EMBD, 0, 4),
+	DIV(CLK_DOUT_CMU_G3D_GLB, "dout_cmu_g3d_glb", "gout_cmu_g3d_glb",
+	    CLK_CON_DIV_CLKCMU_G3D_GLB, 0, 4),
+	DIV(CLK_DOUT_CMU_G3D_NOCD, "dout_cmu_g3d_nocd", "gout_cmu_g3d_nocd",
+	    CLK_CON_DIV_CLKCMU_G3D_NOCD, 0, 4),
+	DIV(CLK_DOUT_CMU_G3D_SWITCH, "dout_cmu_g3d_switch", "gout_cmu_g3d_switch",
+	    CLK_CON_DIV_CLKCMU_G3D_SWITCH, 0, 3),
+	DIV(CLK_DOUT_CMU_G3D_TRACE, "dout_cmu_g3d_trace", "gout_cmu_g3d_trace",
+	    CLK_CON_DIV_CLKCMU_G3D_TRACE, 0, 4),
 };
 
 static const struct samsung_gate_clock top_gate_clks[] __initconst = {
@@ -145,6 +202,14 @@ static const struct samsung_gate_clock top_gate_clks[] __initconst = {
 	GATE(CLK_GOUT_CMU_HSI2_UFS_EMBD, "gout_cmu_hsi2_ufs_embd",
 	     "mout_cmu_hsi2_ufs_embd", CLK_CON_GAT_GATE_CLKCMU_HSI2_UFS_EMBD, 21,
 	     CLK_IGNORE_UNUSED, 0),
+	GATE(CLK_GOUT_CMU_G3D_GLB, "gout_cmu_g3d_glb", "mout_cmu_g3d_glb",
+	     CLK_CON_GAT_GATE_CLKCMU_G3D_GLB, 21, CLK_IGNORE_UNUSED, 0),
+	GATE(CLK_GOUT_CMU_G3D_NOCD, "gout_cmu_g3d_nocd", "mout_cmu_g3d_nocd",
+	     CLK_CON_GAT_GATE_CLKCMU_G3D_NOCD, 21, CLK_IGNORE_UNUSED, 0),
+	GATE(CLK_GOUT_CMU_G3D_SWITCH, "gout_cmu_g3d_switch", "mout_cmu_g3d_switch",
+	     CLK_CON_GAT_GATE_CLKCMU_G3D_SWITCH, 21, CLK_IGNORE_UNUSED, 0),
+	GATE(CLK_GOUT_CMU_G3D_TRACE, "gout_cmu_g3d_trace", "mout_cmu_g3d_trace",
+	     CLK_CON_GAT_GATE_CLKCMU_G3D_TRACE, 21, CLK_IGNORE_UNUSED, 0),
 };
 
 static const struct samsung_cmu_info top_cmu_info __initconst = {
