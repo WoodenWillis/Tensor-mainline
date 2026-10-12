@@ -22,7 +22,9 @@ description: |
 
 properties:
   compatible:
-    const: google,gs101-acpm-ipc
+    enum:
+      - google,gs101-acpm-ipc
+      - google,zumapro-acpm-ipc
 
   "#clock-cells":
     const: 1
