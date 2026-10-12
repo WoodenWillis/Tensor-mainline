@@ -63,6 +63,32 @@ static const struct acpm_clk_driver_data acpm_clk_gs101 = {
 	.mbox_chan_id = 0,
 };
 
+static const struct acpm_clk_variant zumapro_acpm_clks[] = {
+	ACPM_CLK("mif"),
+	ACPM_CLK("int"),
+	ACPM_CLK("cpucl0"),
+	ACPM_CLK("cpucl1"),
+	ACPM_CLK("cpucl2"),
+	ACPM_CLK("dsu"),
+	ACPM_CLK("bci"),
+	ACPM_CLK("g3d"),
+	ACPM_CLK("g3dl2"),
+	ACPM_CLK("tpu"),
+	ACPM_CLK("intcam"),
+	ACPM_CLK("tnr"),
+	ACPM_CLK("cam"),
+	ACPM_CLK("mfc"),
+	ACPM_CLK("disp"),
+	ACPM_CLK("aoc"),
+	ACPM_CLK("bw"),
+};
+
+static const struct acpm_clk_driver_data acpm_clk_zumapro = {
+	.clks = zumapro_acpm_clks,
+	.nr_clks = ARRAY_SIZE(zumapro_acpm_clks),
+	.mbox_chan_id = 0,
+};
+
 static unsigned long acpm_clk_recalc_rate(struct clk_hw *hw,
 					  unsigned long parent_rate)
 {
@@ -158,6 +184,7 @@ static int acpm_clk_probe(struct platform_device *pdev)
 
 static const struct platform_device_id acpm_clk_id[] = {
 	{ .name = "gs101-acpm-clk", .driver_data = (kernel_ulong_t)&acpm_clk_gs101 },
+	{ .name = "zumapro-acpm-clk", .driver_data = (kernel_ulong_t)&acpm_clk_zumapro },
 	{ }
 };
 MODULE_DEVICE_TABLE(platform, acpm_clk_id);
