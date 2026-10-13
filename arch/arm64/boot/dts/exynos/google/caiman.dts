@@ -28,6 +28,10 @@
 	};
 };
 
+&gpu {
+	status = "okay";
+};
+
 &ufs_0 {
 	vcc-supply = <&ufs_0_fixed_vcc_reg>;
 	status = "okay";
