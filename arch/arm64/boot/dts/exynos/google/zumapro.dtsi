@@ -218,6 +218,15 @@
 		};
 	};
 
+	/* TODO(will): document google,zumapro-decon once the DSI side is described. */
+	decon0: display-controller@19470000 {
+		compatible = "google,zumapro-decon";
+		reg = <0x0 0x19470000 0x1000>,
+		      <0x0 0x19900000 0x1000>;
+		reg-names = "decon", "rdma";
+		status = "disabled";
+	};
+
 	ufs_0: ufs@13200000 {
 		compatible = "google,zumapro-ufs";
 		reg = <0x0 0x13200000 0x200>,
