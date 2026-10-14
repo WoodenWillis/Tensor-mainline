@@ -70,6 +70,21 @@ config DRM_SIMPLEDRM
 	  buffer, size, and display format must be provided via device tree's
 	  simple-framebuffer node.
 
+config DRM_ZUMAPRO_DECON
+	tristate "Google zumapro DECON0 framebuffer driver"
+	depends on DRM && MMU && OF
+	depends on ARCH_EXYNOS || COMPILE_TEST
+	select APERTURE_HELPERS
+	select DRM_CLIENT_SELECTION
+	select DRM_GEM_SHMEM_HELPER
+	select DRM_KMS_HELPER
+	select DRM_SYSFB_HELPER
+	help
+	  DRM driver for the display pipeline that the bootloader leaves
+	  running on Google Tensor G4 (zumapro) phones. It scans out the
+	  bootloader's framebuffer through DECON0 in command mode and
+	  triggers a frame after every update.
+
 config DRM_VESADRM
 	tristate "VESA framebuffer driver"
 	depends on DRM && MMU && X86 && (!SYSFB_SIMPLEFB || COMPILE_TEST)
