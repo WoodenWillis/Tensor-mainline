@@ -14,23 +14,8 @@
 	model = "Google Pixel 9 Pro (caiman)";
 	compatible = "google,caiman", "google,zumapro";
 
-	chosen {
-		#address-cells = <2>;
-		#size-cells = <1>;
-		ranges;
-
-		framebuffer@fac00000 {
-			compatible = "simple-framebuffer";
-			reg = <0x0 0xfac00000 (1280 * 2856 * 4)>;
-			width = <1280>;
-			height = <2856>;
-			stride = <(1280 * 4)>;
-			format = "a8r8g8b8";
-		};
-	};
-
 	reserved-memory {
-		framebuffer@fac00000 {
+		abl_framebuffer: framebuffer@fac00000 {
 			reg = <0x0 0xfac00000 0xe00000>;
 			no-map;
 		};
@@ -48,6 +33,11 @@
 		regulator-boot-on;
 		enable-active-high;
 	};
+};
+
+&decon0 {
+	memory-region = <&abl_framebuffer>;
+	status = "okay";
 };
 
 &gpu {
