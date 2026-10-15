@@ -859,10 +859,36 @@ static const struct samsung_cmu_info g3d_cmu_info __initconst = {
 	.nr_clk_regs		= ARRAY_SIZE(g3d_clk_regs),
 };
 
-static void __init zumapro_cmu_g3d_init(struct device_node *np)
+static int __init zumapro_cmu_probe(struct platform_device *pdev)
 {
-	exynos_arm64_register_cmu(NULL, np, &g3d_cmu_info);
+	const struct samsung_cmu_info *info;
+	struct device *dev = &pdev->dev;
+
+	info = of_device_get_match_data(dev);
+	exynos_arm64_register_cmu(dev, dev->of_node, info);
+
+	return 0;
 }
 
-CLK_OF_DECLARE(zumapro_cmu_g3d, "google,zumapro-cmu-g3d",
-	       zumapro_cmu_g3d_init);
+static const struct of_device_id zumapro_cmu_of_match[] = {
+	{
+		.compatible = "google,zumapro-cmu-g3d",
+		.data = &g3d_cmu_info,
+	}, {
+	},
+};
+
+static struct platform_driver zumapro_cmu_driver __refdata = {
+	.driver	= {
+		.name = "zumapro-cmu",
+		.of_match_table = zumapro_cmu_of_match,
+		.suppress_bind_attrs = true,
+	},
+	.probe = zumapro_cmu_probe,
+};
+
+static int __init zumapro_cmu_init(void)
+{
+	return platform_driver_register(&zumapro_cmu_driver);
+}
+core_initcall(zumapro_cmu_init);
