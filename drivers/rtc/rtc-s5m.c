@@ -254,6 +254,7 @@ static int s5m_check_pending_alarm_interrupt(struct s5m_rtc_info *info,
 		val &= S5M_ALARM0_STATUS;
 		break;
 	case S2MPG10:
+	case S2MPG14:
 	case S2MPS15X:
 	case S2MPS14X:
 	case S2MPS13X:
@@ -302,6 +303,7 @@ static int s5m8767_rtc_set_alarm_reg(struct s5m_rtc_info *info)
 		udr_mask |= S5M_RTC_TIME_EN_MASK;
 		break;
 	case S2MPG10:
+	case S2MPG14:
 	case S2MPS15X:
 	case S2MPS14X:
 	case S2MPS13X:
@@ -353,6 +355,7 @@ static int s5m_rtc_read_time(struct device *dev, struct rtc_time *tm)
 	switch (info->device_type) {
 	case S5M8767X:
 	case S2MPG10:
+	case S2MPG14:
 	case S2MPS15X:
 	case S2MPS14X:
 	case S2MPS13X:
@@ -377,6 +380,7 @@ static int s5m_rtc_set_time(struct device *dev, struct rtc_time *tm)
 	switch (info->device_type) {
 	case S5M8767X:
 	case S2MPG10:
+	case S2MPG14:
 	case S2MPS15X:
 	case S2MPS14X:
 	case S2MPS13X:
@@ -415,6 +419,7 @@ static int s5m_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 	switch (info->device_type) {
 	case S5M8767X:
 	case S2MPG10:
+	case S2MPG14:
 	case S2MPS15X:
 	case S2MPS14X:
 	case S2MPS13X:
@@ -454,6 +459,7 @@ static int s5m_rtc_stop_alarm(struct s5m_rtc_info *info)
 	switch (info->device_type) {
 	case S5M8767X:
 	case S2MPG10:
+	case S2MPG14:
 	case S2MPS15X:
 	case S2MPS14X:
 	case S2MPS13X:
@@ -493,6 +499,7 @@ static int s5m_rtc_start_alarm(struct s5m_rtc_info *info)
 	switch (info->device_type) {
 	case S5M8767X:
 	case S2MPG10:
+	case S2MPG14:
 	case S2MPS15X:
 	case S2MPS14X:
 	case S2MPS13X:
@@ -531,6 +538,7 @@ static int s5m_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 	switch (info->device_type) {
 	case S5M8767X:
 	case S2MPG10:
+	case S2MPG14:
 	case S2MPS15X:
 	case S2MPS14X:
 	case S2MPS13X:
@@ -612,6 +620,7 @@ static int s5m8767_rtc_init_reg(struct s5m_rtc_info *info)
 		break;
 
 	case S2MPG10:
+	case S2MPG14:
 	case S2MPS15X:
 	case S2MPS14X:
 	case S2MPS13X:
@@ -712,7 +721,7 @@ static int s5m_rtc_probe(struct platform_device *pdev)
 		if (IS_ERR(info->regmap))
 			return dev_err_probe(&pdev->dev, PTR_ERR(info->regmap),
 					     "Failed to allocate regmap\n");
-	} else if (device_type == S2MPG10) {
+	} else if (device_type == S2MPG10 || device_type == S2MPG14) {
 		info->regs = &s2mpg10_rtc_regs;
 	} else {
 		return dev_err_probe(&pdev->dev, -ENODEV,
@@ -809,6 +818,7 @@ static SIMPLE_DEV_PM_OPS(s5m_rtc_pm_ops, s5m_rtc_suspend, s5m_rtc_resume);
 static const struct platform_device_id s5m_rtc_id[] = {
 	{ .name = "s5m-rtc",     .driver_data = S5M8767X },
 	{ .name = "s2mpg10-rtc", .driver_data = S2MPG10 },
+	{ .name = "s2mpg14-rtc", .driver_data = S2MPG14 },
 	{ .name = "s2mps13-rtc", .driver_data = S2MPS13X },
 	{ .name = "s2mps14-rtc", .driver_data = S2MPS14X },
 	{ .name = "s2mps15-rtc", .driver_data = S2MPS15X },
