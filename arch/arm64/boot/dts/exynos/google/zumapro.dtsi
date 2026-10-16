@@ -193,6 +193,12 @@
 			 <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_G3DL2>;
 		clock-names = "oscclk", "glb", "nocd", "switch", "trace",
 			      "g3d", "g3dl2";
+		assigned-clocks = <&cmu_g3d CLK_MOUT_G3D_GLB_USER>,
+				  <&cmu_g3d CLK_MOUT_G3D_NOCD_USER>,
+				  <&cmu_g3d CLK_MOUT_G3D_SWITCH_USER>;
+		assigned-clock-parents = <&cmu_top CLK_DOUT_CMU_G3D_GLB>,
+					 <&cmu_top CLK_DOUT_CMU_G3D_NOCD>,
+					 <&cmu_top CLK_DOUT_CMU_G3D_SWITCH>;
 	};
 
 	gpu: gpu@1f000000 {
