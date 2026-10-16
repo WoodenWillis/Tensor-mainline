@@ -671,6 +671,36 @@ static const struct regmap_access_table s2mpg14_meter_volatile_table = {
 	.n_yes_ranges = ARRAY_SIZE(s2mpg14_meter_ro_registers),
 };
 
+static const struct regmap_range s2mpg14_rtc_registers[] = {
+	regmap_reg_range(0x00, 0x30),
+};
+
+static const struct regmap_range s2mpg14_rtc_volatile_registers[] = {
+	regmap_reg_range(0x01, 0x01),
+	regmap_reg_range(0x05, 0x0c),
+};
+
+static const struct regmap_access_table s2mpg14_rtc_rd_table = {
+	.yes_ranges = s2mpg14_rtc_registers,
+	.n_yes_ranges = ARRAY_SIZE(s2mpg14_rtc_registers),
+};
+
+static const struct regmap_access_table s2mpg14_rtc_volatile_table = {
+	.yes_ranges = s2mpg14_rtc_volatile_registers,
+	.n_yes_ranges = ARRAY_SIZE(s2mpg14_rtc_volatile_registers),
+};
+
+static const struct regmap_config s2mpg14_regmap_config_rtc = {
+	.name = "rtc",
+	.reg_bits = ACPM_ADDR_BITS,
+	.val_bits = 8,
+	.max_register = 0x30, /* S2MPG14_RTC_SCRATCH4 */
+	.rd_table = &s2mpg14_rtc_rd_table,
+	.volatile_table = &s2mpg14_rtc_volatile_table,
+	.num_reg_defaults_raw = 0x30 + 1,
+	.cache_type = REGCACHE_FLAT,
+};
+
 static const struct regmap_config s2mpg14_regmap_config_meter = {
 	.name = "meter",
 	.reg_bits = ACPM_ADDR_BITS,
@@ -842,6 +872,7 @@ static const struct sec_pmic_acpm_platform_data s2mpg14_data = {
 	.speedy_channel = 0,
 	.regmap_cfg_common = &s2mpg14_regmap_config_common,
 	.regmap_cfg_pmic = &s2mpg14_regmap_config_pmic,
+	.regmap_cfg_rtc = &s2mpg14_regmap_config_rtc,
 	.regmap_cfg_meter = &s2mpg14_regmap_config_meter,
 };
 
