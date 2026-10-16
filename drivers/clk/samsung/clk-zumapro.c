@@ -863,6 +863,12 @@ static int __init zumapro_cmu_probe(struct platform_device *pdev)
 {
 	const struct samsung_cmu_info *info;
 	struct device *dev = &pdev->dev;
+	struct clk_bulk_data *inputs;
+	int ret;
+
+	ret = devm_clk_bulk_get_all(dev, &inputs);
+	if (ret < 0)
+		return dev_err_probe(dev, ret, "input clocks not ready\n");
 
 	info = of_device_get_match_data(dev);
 	exynos_arm64_register_cmu(dev, dev->of_node, info);
