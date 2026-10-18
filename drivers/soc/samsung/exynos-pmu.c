@@ -245,6 +245,9 @@ static int __gs101_cpu_pmu_online(unsigned int cpu)
 	regmap_write(pmu_context->pmureg, GS101_CPU_INFORM(cpuhint),
 		     CPU_INFORM_CLEAR);
 
+	if (!pmu_context->pmuintrgen)
+		return 0;
+
 	mask = BIT(cpu);
 
 	regmap_update_bits(pmu_context->pmuintrgen, GS101_GRP2_INTR_BID_ENABLE,
@@ -305,6 +308,9 @@ static int __gs101_cpu_pmu_offline(unsigned int cpu)
 	/* set cpu inform hint */
 	regmap_write(pmu_context->pmureg, GS101_CPU_INFORM(cpuhint),
 		     CPU_INFORM_C2);
+
+	if (!pmu_context->pmuintrgen)
+		return 0;
 
 	mask = BIT(cpu);
 	regmap_update_bits(pmu_context->pmuintrgen, GS101_GRP2_INTR_BID_ENABLE,
@@ -410,13 +416,13 @@ static struct notifier_block exynos_cpupm_reboot_nb = {
 	.notifier_call = exynos_cpupm_reboot_notifier,
 };
 
-static int setup_cpuhp_and_cpuidle(struct device *dev)
+static int setup_pmu_intr_gen(struct device *dev)
 {
 	struct device_node *intr_gen_node __free(device_node) =
 		of_parse_phandle(dev->of_node, "google,pmu-intr-gen-syscon", 0);
 	struct resource intrgen_res;
 	void __iomem *virt_addr;
-	int ret, cpu;
+	int ret;
 
 	if (!intr_gen_node) {
 		/*
@@ -424,7 +430,7 @@ static int setup_cpuhp_and_cpuidle(struct device *dev)
 		 * phandle just issue a warning rather than fail to probe.
 		 */
 		dev_warn(dev, "pmu-intr-gen syscon unavailable\n");
-		return 0;
+		return -ENODEV;
 	}
 
 	/*
@@ -433,6 +439,9 @@ static int setup_cpuhp_and_cpuidle(struct device *dev)
 	 * syscon provided regmap.
 	 */
 	ret = of_address_to_resource(intr_gen_node, 0, &intrgen_res);
+	if (ret)
+		return ret;
+
 	virt_addr = devm_ioremap(dev, intrgen_res.start,
 				 resource_size(&intrgen_res));
 	if (!virt_addr)
@@ -446,10 +455,21 @@ static int setup_cpuhp_and_cpuidle(struct device *dev)
 	}
 
 	/* register custom mmio regmap with syscon */
-	ret = of_syscon_register_regmap(intr_gen_node,
-					pmu_context->pmuintrgen);
-	if (ret)
-		return ret;
+	return of_syscon_register_regmap(intr_gen_node,
+					 pmu_context->pmuintrgen);
+}
+
+static int setup_cpuhp_and_cpuidle(struct device *dev)
+{
+	int ret, cpu;
+
+	if (!pmu_context->pmu_data->no_pmu_intr_gen) {
+		ret = setup_pmu_intr_gen(dev);
+		if (ret == -ENODEV)
+			return 0;
+		if (ret)
+			return ret;
+	}
 
 	pmu_context->in_cpuhp = devm_bitmap_zalloc(dev, num_possible_cpus(),
 						   GFP_KERNEL);
