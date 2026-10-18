@@ -67,6 +67,7 @@
 			reg = <0x0>;
 			capacity-dmips-mhz = <193>;
 			dynamic-power-coefficient = <70>;
+			cpu-idle-states = <&hayes_cpu_sleep>;
 			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL0>;
 			enable-method = "psci";
 			operating-points-v2 = <&cpucl0_opp_table>;
@@ -78,6 +79,7 @@
 			reg = <0x100>;
 			capacity-dmips-mhz = <193>;
 			dynamic-power-coefficient = <70>;
+			cpu-idle-states = <&hayes_cpu_sleep>;
 			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL0>;
 			enable-method = "psci";
 			operating-points-v2 = <&cpucl0_opp_table>;
@@ -89,6 +91,7 @@
 			reg = <0x200>;
 			capacity-dmips-mhz = <193>;
 			dynamic-power-coefficient = <70>;
+			cpu-idle-states = <&hayes_cpu_sleep>;
 			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL0>;
 			enable-method = "psci";
 			operating-points-v2 = <&cpucl0_opp_table>;
@@ -100,6 +103,7 @@
 			reg = <0x300>;
 			capacity-dmips-mhz = <193>;
 			dynamic-power-coefficient = <70>;
+			cpu-idle-states = <&hayes_cpu_sleep>;
 			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL0>;
 			enable-method = "psci";
 			operating-points-v2 = <&cpucl0_opp_table>;
@@ -111,6 +115,7 @@
 			reg = <0x400>;
 			capacity-dmips-mhz = <927>;
 			dynamic-power-coefficient = <513>;
+			cpu-idle-states = <&hunter_cpu_sleep>;
 			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL1>;
 			enable-method = "psci";
 			operating-points-v2 = <&cpucl1_opp_table>;
@@ -122,6 +127,7 @@
 			reg = <0x500>;
 			capacity-dmips-mhz = <927>;
 			dynamic-power-coefficient = <513>;
+			cpu-idle-states = <&hunter_cpu_sleep>;
 			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL1>;
 			enable-method = "psci";
 			operating-points-v2 = <&cpucl1_opp_table>;
@@ -133,6 +139,7 @@
 			reg = <0x600>;
 			capacity-dmips-mhz = <927>;
 			dynamic-power-coefficient = <513>;
+			cpu-idle-states = <&hunter_cpu_sleep>;
 			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL1>;
 			enable-method = "psci";
 			operating-points-v2 = <&cpucl1_opp_table>;
@@ -144,11 +151,11 @@
 			reg = <0x700>;
 			capacity-dmips-mhz = <1024>;
 			dynamic-power-coefficient = <757>;
+			cpu-idle-states = <&hunterelp_cpu_sleep>;
 			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL2>;
 			enable-method = "psci";
 			operating-points-v2 = <&cpucl2_opp_table>;
 		};
-
 
 		idle-states {
 			entry-method = "psci";
