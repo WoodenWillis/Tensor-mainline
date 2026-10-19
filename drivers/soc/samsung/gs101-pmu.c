@@ -324,6 +324,7 @@ static const struct regmap_access_table gs101_pmu_wr_table = {
 
 /* TODO(will): extend as zumapro PMU consumers land */
 static const struct regmap_range zumapro_pmu_registers[] = {
+	regmap_reg_range(GS101_INFORM0, GS101_INFORM0),
 	regmap_reg_range(GS101_CPU_INFORM(0), GS101_CPU_INFORM(7)),
 	regmap_reg_range(ZUMAPRO_PHY_CTRL_UFS, ZUMAPRO_PHY_CTRL_UFS),
 };
@@ -337,6 +338,7 @@ const struct exynos_pmu_data zumapro_pmu_data = {
 	.pmu_secure = true,
 	.pmu_cpuhp = true,
 	.no_pmu_intr_gen = true,
+	.inform0_allows_c2 = true,
 	.rd_table = &zumapro_pmu_access_table,
 	.wr_table = &zumapro_pmu_access_table,
 };

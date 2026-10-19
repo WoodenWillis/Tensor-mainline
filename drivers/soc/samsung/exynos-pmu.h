@@ -51,6 +51,7 @@ struct exynos_pmu_data {
 	bool pmu_secure;
 	bool pmu_cpuhp;
 	bool no_pmu_intr_gen;
+	bool inform0_allows_c2;
 
 	void (*pmu_init)(void);
 	void (*powerdown_conf)(enum sys_powerdown);

@@ -229,6 +229,7 @@ EXPORT_SYMBOL_GPL(exynos_get_pmu_regmap_by_phandle);
  */
 #define CPU_INFORM_CLEAR	0
 #define CPU_INFORM_C2		1
+#define PMU_INFORM0_ALLOWED_C2	1
 
 /*
  * __gs101_cpu_pmu_ prefix functions are common code shared by CPU PM notifiers
@@ -486,6 +487,9 @@ static int setup_cpuhp_and_cpuidle(struct device *dev)
 
 	cpuhp_setup_state(CPUHP_AP_ONLINE_DYN, "soc/exynos-pmu:online",
 			  NULL, gs101_cpuhp_pmu_offline);
+
+	if (pmu_context->pmu_data->inform0_allows_c2)
+		regmap_write(pmu_context->pmureg, GS101_INFORM0, PMU_INFORM0_ALLOWED_C2);
 
 	/* register CPU PM notifiers for cpuidle */
 	cpu_pm_register_notifier(&gs101_cpu_pm_notifier);
