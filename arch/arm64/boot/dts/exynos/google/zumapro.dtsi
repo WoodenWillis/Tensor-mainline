@@ -505,6 +505,14 @@
 					 <&cmu_top CLK_DOUT_CMU_G3D_SWITCH>;
 	};
 
+	gpu_dvfs: power-controller-gpu {
+		compatible = "google,zumapro-gpu-dvfs";
+		clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_G3DL2>,
+			 <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_G3D>;
+		clock-names = "g3dl2", "g3d";
+		#power-domain-cells = <0>;
+	};
+
 	gpu: gpu@1f000000 {
 		compatible = "google,zumapro-mali", "arm,mali-valhall-csf";
 		reg = <0x0 0x1f000000 0x480000>;
@@ -516,16 +524,8 @@
 			 <&cmu_g3d CLK_GOUT_G3D_GPU_CLK_COREGROUP>,
 			 <&cmu_g3d CLK_GOUT_G3D_GPU_CLK_STACKS>;
 		clock-names = "core", "coregroup", "stacks";
-		operating-points-v2 = <&gpu_opp_table>;
+		power-domains = <&gpu_dvfs>;
 		status = "disabled";
-
-		gpu_opp_table: opp-table {
-			compatible = "operating-points-v2";
-
-			opp-160000000 {
-				opp-hz = /bits/ 64 <160000000>;
-			};
-		};
 	};
 
 	/* TODO(will): document google,zumapro-decon once the DSI side is described. */
