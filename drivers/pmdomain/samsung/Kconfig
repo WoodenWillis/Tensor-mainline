@@ -5,4 +5,14 @@ config EXYNOS_PM_DOMAINS
 	bool "Exynos PM domains" if COMPILE_TEST
 	depends on (ARCH_EXYNOS && PM_GENERIC_DOMAINS) || COMPILE_TEST
 
+config ZUMAPRO_GPU_DVFS
+	bool "Google zumapro GPU DVFS performance domain"
+	depends on ARCH_EXYNOS || COMPILE_TEST
+	depends on PM_GENERIC_DOMAINS && OF && COMMON_CLK
+	select PM_OPP
+	help
+	  Performance domain for the Mali GPU on Google Tensor G4 (zumapro).
+	  It scales the G3D and G3DL2 ACPM DVFS clocks in pairs, so that
+	  Panthor's devfreq can drive GPU DVFS through the ACPM firmware.
+
 endif
