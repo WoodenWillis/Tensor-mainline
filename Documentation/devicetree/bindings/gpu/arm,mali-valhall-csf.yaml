@@ -128,6 +128,22 @@ allOf:
       properties:
         compatible:
           contains:
+            const: google,zumapro-mali
+    then:
+      properties:
+        mali-supply: false
+        sram-supply: false
+        operating-points-v2: false
+        opp-table: false
+        power-domains:
+          maxItems: 1
+        power-domain-names: false
+      required:
+        - power-domains
+  - if:
+      properties:
+        compatible:
+          contains:
             const: mediatek,mt8196-mali
     then:
       properties:
