@@ -493,6 +493,15 @@ static int setup_cpuhp_and_cpuidle(struct device *dev)
 	return 0;
 }
 
+static int exynos_pmu_add_clkout(struct device *dev)
+{
+	if (pmu_context->pmu_data && pmu_context->pmu_data->pmu_secure)
+		return 0;
+
+	return devm_mfd_add_devices(dev, PLATFORM_DEVID_NONE, exynos_pmu_devs,
+				    ARRAY_SIZE(exynos_pmu_devs), NULL, 0, NULL);
+}
+
 static int exynos_pmu_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -562,8 +571,7 @@ static int exynos_pmu_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, pmu_context);
 
-	ret = devm_mfd_add_devices(dev, PLATFORM_DEVID_NONE, exynos_pmu_devs,
-				   ARRAY_SIZE(exynos_pmu_devs), NULL, 0, NULL);
+	ret = exynos_pmu_add_clkout(dev);
 	if (ret)
 		return ret;
 
