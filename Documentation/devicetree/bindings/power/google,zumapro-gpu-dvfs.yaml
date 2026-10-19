@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/power/google,zumapro-gpu-dvfs.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Google zumapro GPU DVFS performance domain
+
+maintainers:
+  - WoodenWillis <239688658+WoodenWillis@users.noreply.github.com>
+
+description:
+  Performance domain for the zumapro Mali GPU. The ACPM firmware owns the G3D
+  PLLs and rails and scales them per DVFS domain. Each GPU performance level
+  sets the top-level (g3dl2) and shader (g3d) ACPM DVFS clocks together.
+
+properties:
+  $nodename:
+    pattern: '^power-controller(-[a-z0-9]+)?$'
+
+  compatible:
+    const: google,zumapro-gpu-dvfs
+
+  clocks:
+    items:
+      - description: ACPM G3DL2 DVFS clock, feeding the GPU top level and L2
+      - description: ACPM G3D DVFS clock, feeding the shader stacks
+
+  clock-names:
+    items:
+      - const: g3dl2
+      - const: g3d
+
+  "#power-domain-cells":
+    const: 0
+
+required:
+  - compatible
+  - clocks
+  - clock-names
+  - "#power-domain-cells"
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/clock/google,zumapro-acpm.h>
+
+    power-controller {
+        compatible = "google,zumapro-gpu-dvfs";
+        clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_G3DL2>,
+                 <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_G3D>;
+        clock-names = "g3dl2", "g3d";
+        #power-domain-cells = <0>;
+    };
