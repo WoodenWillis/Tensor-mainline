@@ -81,7 +81,7 @@ CONFIG_ARCH_EXYNOS=y
 # CONFIG_ARM64_LSUI is not set
 # CONFIG_ARM64_SVE is not set
 # CONFIG_RELOCATABLE is not set
-CONFIG_CMDLINE="earlycon=exynos4210,mmio32,0x10870000 console=tty0 console=ttySAC0,3000000n8 fbcon=font:TER16x32 clk_ignore_unused regulator_ignore_unused fw_devlink=permissive ehld.noehld=1 s3c2410_wdt.soft_noboot=1"
+CONFIG_CMDLINE="earlycon=exynos4210,mmio32,0x10870000 console=tty0 console=ttySAC0,3000000n8 fbcon=font:TER16x32 clk_ignore_unused regulator_ignore_unused fw_devlink=permissive ehld.noehld=1 s3c2410_wdt.soft_noboot=1 cpuidle.off=1"
 CONFIG_CMDLINE_FORCE=y
 # CONFIG_EFI is not set
 # CONFIG_SUSPEND is not set
