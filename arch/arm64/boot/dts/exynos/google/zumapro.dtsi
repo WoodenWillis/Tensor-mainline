@@ -34,8 +34,8 @@
 	};
 
 	chosen {
-		bootargs = "earlycon=exynos4210,mmio32,0x10870000 console=ttySAC0,3000000n8";
-		stdout-path = "serial0:3000000n8";
+		bootargs = "earlycon=exynos4210,mmio32,0x10870000 console=ttySAC0,921600n8";
+		stdout-path = "serial0:921600n8";
 	};
 
 	cpus {
