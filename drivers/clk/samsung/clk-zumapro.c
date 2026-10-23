@@ -57,6 +57,12 @@
 #define CLK_CON_GAT_GATE_CLKCMU_G3D_NOCD	0x2098
 #define CLK_CON_GAT_GATE_CLKCMU_G3D_SWITCH	0x209c
 #define CLK_CON_GAT_GATE_CLKCMU_G3D_TRACE	0x20a0
+#define CLK_CON_MUX_MUX_CLKCMU_HSI0_NOC		0x1094
+#define CLK_CON_MUX_MUX_CLKCMU_HSI0_PERI	0x1098
+#define CLK_CON_DIV_CLKCMU_HSI0_NOC		0x188c
+#define CLK_CON_DIV_CLKCMU_HSI0_PERI		0x1890
+#define CLK_CON_GAT_GATE_CLKCMU_HSI0_NOC	0x20bc
+#define CLK_CON_GAT_GATE_CLKCMU_HSI0_PERI	0x20c0
 
 static const unsigned long top_clk_regs[] __initconst = {
 	PLL_LOCKTIME_PLL_SHARED0,
@@ -96,6 +102,12 @@ static const unsigned long top_clk_regs[] __initconst = {
 	CLK_CON_GAT_GATE_CLKCMU_G3D_NOCD,
 	CLK_CON_GAT_GATE_CLKCMU_G3D_SWITCH,
 	CLK_CON_GAT_GATE_CLKCMU_G3D_TRACE,
+	CLK_CON_MUX_MUX_CLKCMU_HSI0_NOC,
+	CLK_CON_MUX_MUX_CLKCMU_HSI0_PERI,
+	CLK_CON_DIV_CLKCMU_HSI0_NOC,
+	CLK_CON_DIV_CLKCMU_HSI0_PERI,
+	CLK_CON_GAT_GATE_CLKCMU_HSI0_NOC,
+	CLK_CON_GAT_GATE_CLKCMU_HSI0_PERI,
 };
 
 static const struct samsung_pll_clock top_pll_clks[] __initconst = {
@@ -167,6 +179,10 @@ static const struct samsung_mux_clock top_mux_clks[] __initconst = {
 	    CLK_CON_MUX_MUX_CLKCMU_G3D_SWITCH, 0, 3),
 	MUX(CLK_MOUT_CMU_G3D_TRACE, "mout_cmu_g3d_trace", mout_cmu_g3d_trace_p,
 	    CLK_CON_MUX_MUX_CLKCMU_G3D_TRACE, 0, 2),
+	MUX(CLK_MOUT_CMU_HSI0_NOC, "mout_cmu_hsi0_noc", mout_cmu_hsi2_noc_p,
+	    CLK_CON_MUX_MUX_CLKCMU_HSI0_NOC, 0, 3),
+	MUX(CLK_MOUT_CMU_HSI0_PERI, "mout_cmu_hsi0_peri", mout_cmu_peric0_p,
+	    CLK_CON_MUX_MUX_CLKCMU_HSI0_PERI, 0, 2),
 };
 
 static const struct samsung_div_clock top_div_clks[] __initconst = {
@@ -188,6 +204,10 @@ static const struct samsung_div_clock top_div_clks[] __initconst = {
 	    CLK_CON_DIV_CLKCMU_G3D_SWITCH, 0, 3),
 	DIV(CLK_DOUT_CMU_G3D_TRACE, "dout_cmu_g3d_trace", "gout_cmu_g3d_trace",
 	    CLK_CON_DIV_CLKCMU_G3D_TRACE, 0, 4),
+	DIV(CLK_DOUT_CMU_HSI0_NOC, "dout_cmu_hsi0_noc", "gout_cmu_hsi0_noc",
+	    CLK_CON_DIV_CLKCMU_HSI0_NOC, 0, 4),
+	DIV(CLK_DOUT_CMU_HSI0_PERI, "dout_cmu_hsi0_peri", "gout_cmu_hsi0_peri",
+	    CLK_CON_DIV_CLKCMU_HSI0_PERI, 0, 4),
 };
 
 static const struct samsung_gate_clock top_gate_clks[] __initconst = {
@@ -210,6 +230,10 @@ static const struct samsung_gate_clock top_gate_clks[] __initconst = {
 	     CLK_CON_GAT_GATE_CLKCMU_G3D_SWITCH, 21, CLK_IGNORE_UNUSED, 0),
 	GATE(CLK_GOUT_CMU_G3D_TRACE, "gout_cmu_g3d_trace", "mout_cmu_g3d_trace",
 	     CLK_CON_GAT_GATE_CLKCMU_G3D_TRACE, 21, CLK_IGNORE_UNUSED, 0),
+	GATE(CLK_GOUT_CMU_HSI0_NOC, "gout_cmu_hsi0_noc", "mout_cmu_hsi0_noc",
+	     CLK_CON_GAT_GATE_CLKCMU_HSI0_NOC, 21, CLK_IGNORE_UNUSED, 0),
+	GATE(CLK_GOUT_CMU_HSI0_PERI, "gout_cmu_hsi0_peri", "mout_cmu_hsi0_peri",
+	     CLK_CON_GAT_GATE_CLKCMU_HSI0_PERI, 21, CLK_IGNORE_UNUSED, 0),
 };
 
 static const struct samsung_cmu_info top_cmu_info __initconst = {
@@ -434,6 +458,97 @@ static void __init zumapro_cmu_hsi2_init(struct device_node *np)
 
 CLK_OF_DECLARE(zumapro_cmu_hsi2, "google,zumapro-cmu-hsi2",
 	       zumapro_cmu_hsi2_init);
+
+/* ---- CMU_HSI0 ------------------------------------------------------------ */
+
+/* Register Offset definitions for CMU_HSI0 (0x11000000) */
+#define PLL_CON0_MUX_CLKCMU_HSI0_ALT_USER				0x0600
+#define PLL_CON0_MUX_CLKCMU_HSI0_NOC_USER				0x0620
+#define PLL_CON0_MUX_CLKCMU_HSI0_PERI_USER				0x0680
+#define CLK_CON_MUX_MUX_CLK_HSI0_NOC					0x1000
+#define CLK_CON_MUX_MUX_CLK_HSI0_USI2					0x101c
+#define CLK_CON_DIV_DIV_CLK_HSI0_USI2					0x181c
+#define CLK_CON_GAT_GOUT_BLK_HSI0_UID_SYSREG_HSI0_IPCLKPORT_PCLK	0x208c
+#define CLK_CON_GAT_CLK_BLK_HSI0_UID_RSTNSYNC_CLK_HSI0_USI2_IPCLKPORT_CLK	0x20bc
+#define CLK_CON_GAT_CLK_BLK_HSI0_UID_USI2_HSI0_IPCLKPORT_IPCLK		0x20fc
+#define CLK_CON_GAT_CLK_BLK_HSI0_UID_USI2_HSI0_IPCLKPORT_PCLK		0x2100
+#define CLK_CON_GAT_GATE_CLK_HSI0_USI2					0x2120
+
+static const unsigned long hsi0_clk_regs[] __initconst = {
+	PLL_CON0_MUX_CLKCMU_HSI0_ALT_USER,
+	PLL_CON0_MUX_CLKCMU_HSI0_NOC_USER,
+	PLL_CON0_MUX_CLKCMU_HSI0_PERI_USER,
+	CLK_CON_MUX_MUX_CLK_HSI0_NOC,
+	CLK_CON_MUX_MUX_CLK_HSI0_USI2,
+	CLK_CON_DIV_DIV_CLK_HSI0_USI2,
+	CLK_CON_GAT_GOUT_BLK_HSI0_UID_SYSREG_HSI0_IPCLKPORT_PCLK,
+	CLK_CON_GAT_CLK_BLK_HSI0_UID_RSTNSYNC_CLK_HSI0_USI2_IPCLKPORT_CLK,
+	CLK_CON_GAT_CLK_BLK_HSI0_UID_USI2_HSI0_IPCLKPORT_IPCLK,
+	CLK_CON_GAT_CLK_BLK_HSI0_UID_USI2_HSI0_IPCLKPORT_PCLK,
+	CLK_CON_GAT_GATE_CLK_HSI0_USI2,
+};
+
+PNAME(mout_hsi0_alt_user_p) = { "oscclk", "clk_hsi0_alt" };
+PNAME(mout_hsi0_noc_user_p) = { "oscclk", "dout_cmu_hsi0_noc" };
+PNAME(mout_hsi0_peri_user_p) = { "oscclk", "dout_cmu_hsi0_peri" };
+PNAME(mout_hsi0_noc_p) = { "mout_hsi0_noc_user", "mout_hsi0_alt_user" };
+PNAME(mout_hsi0_usi2_p) = { "mout_hsi0_peri_user", "oscclk" };
+
+static const struct samsung_mux_clock hsi0_mux_clks[] __initconst = {
+	MUX(CLK_MOUT_HSI0_ALT_USER, "mout_hsi0_alt_user", mout_hsi0_alt_user_p,
+	    PLL_CON0_MUX_CLKCMU_HSI0_ALT_USER, 4, 1),
+	MUX(CLK_MOUT_HSI0_NOC_USER, "mout_hsi0_noc_user", mout_hsi0_noc_user_p,
+	    PLL_CON0_MUX_CLKCMU_HSI0_NOC_USER, 4, 1),
+	MUX(CLK_MOUT_HSI0_PERI_USER, "mout_hsi0_peri_user", mout_hsi0_peri_user_p,
+	    PLL_CON0_MUX_CLKCMU_HSI0_PERI_USER, 4, 1),
+	MUX(CLK_MOUT_HSI0_NOC, "mout_hsi0_noc", mout_hsi0_noc_p,
+	    CLK_CON_MUX_MUX_CLK_HSI0_NOC, 0, 1),
+	MUX(CLK_MOUT_HSI0_USI2, "mout_hsi0_usi2", mout_hsi0_usi2_p,
+	    CLK_CON_MUX_MUX_CLK_HSI0_USI2, 0, 1),
+};
+
+static const struct samsung_div_clock hsi0_div_clks[] __initconst = {
+	DIV(CLK_DOUT_HSI0_USI2, "dout_hsi0_usi2", "gout_hsi0_usi2",
+	    CLK_CON_DIV_DIV_CLK_HSI0_USI2, 0, 4),
+};
+
+static const struct samsung_gate_clock hsi0_gate_clks[] __initconst = {
+	GATE(CLK_GOUT_HSI0_USI2, "gout_hsi0_usi2", "mout_hsi0_usi2",
+	     CLK_CON_GAT_GATE_CLK_HSI0_USI2, 21, 0, 0),
+	GATE(CLK_GOUT_HSI0_USI2_IPCLK, "gout_hsi0_usi2_ipclk", "dout_hsi0_usi2",
+	     CLK_CON_GAT_CLK_BLK_HSI0_UID_USI2_HSI0_IPCLKPORT_IPCLK,
+	     21, CLK_SET_RATE_PARENT, 0),
+	GATE(CLK_GOUT_HSI0_USI2_PCLK, "gout_hsi0_usi2_pclk", "mout_hsi0_noc",
+	     CLK_CON_GAT_CLK_BLK_HSI0_UID_USI2_HSI0_IPCLKPORT_PCLK, 21, 0, 0),
+	GATE(CLK_GOUT_HSI0_RSTNSYNC_CLK_USI2, "gout_hsi0_rstnsync_clk_usi2",
+	     "dout_hsi0_usi2",
+	     CLK_CON_GAT_CLK_BLK_HSI0_UID_RSTNSYNC_CLK_HSI0_USI2_IPCLKPORT_CLK,
+	     21, CLK_IGNORE_UNUSED, 0),
+	GATE(CLK_GOUT_HSI0_SYSREG_HSI0_PCLK, "gout_hsi0_sysreg_hsi0_pclk",
+	     "mout_hsi0_noc",
+	     CLK_CON_GAT_GOUT_BLK_HSI0_UID_SYSREG_HSI0_IPCLKPORT_PCLK, 21, 0, 0),
+};
+
+static const struct samsung_cmu_info hsi0_cmu_info __initconst = {
+	.mux_clks		= hsi0_mux_clks,
+	.nr_mux_clks		= ARRAY_SIZE(hsi0_mux_clks),
+	.div_clks		= hsi0_div_clks,
+	.nr_div_clks		= ARRAY_SIZE(hsi0_div_clks),
+	.gate_clks		= hsi0_gate_clks,
+	.nr_gate_clks		= ARRAY_SIZE(hsi0_gate_clks),
+	.nr_clk_ids		= CLKS_NR_HSI0,
+	.clk_regs		= hsi0_clk_regs,
+	.nr_clk_regs		= ARRAY_SIZE(hsi0_clk_regs),
+	.clk_name		= "noc",
+};
+
+static void __init zumapro_cmu_hsi0_init(struct device_node *np)
+{
+	exynos_arm64_register_cmu(NULL, np, &hsi0_cmu_info);
+}
+
+CLK_OF_DECLARE(zumapro_cmu_hsi0, "google,zumapro-cmu-hsi0",
+	       zumapro_cmu_hsi0_init);
 
 #define PLL_CON0_MUX_CLKCMU_G3D_GLB_USER	0x0600
 #define PLL_CON0_MUX_CLKCMU_G3D_NOCD_USER	0x0610
