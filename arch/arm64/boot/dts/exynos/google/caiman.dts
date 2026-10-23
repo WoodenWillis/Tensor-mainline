@@ -8,6 +8,8 @@
 /dts-v1/;
 
 #include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/soc/samsung,exynos-usi.h>
 #include "zumapro.dtsi"
 
 / {
@@ -44,6 +46,10 @@
 	status = "okay";
 };
 
+&pinctrl_custom_alive {
+	status = "okay";
+};
+
 &s2mpg14_pmic {
 	regulators {
 		ldo4m_ts_avdd: ldo4m {
@@ -60,11 +66,33 @@
 	};
 };
 
+&spi_20 {
+	status = "okay";
+
+	touchscreen@0 {
+		compatible = "synaptics,s3908";
+		reg = <0>;
+		interrupt-parent = <&gpn0>;
+		interrupts = <0 IRQ_TYPE_LEVEL_LOW>;
+		reset-gpios = <&gpp1 1 GPIO_ACTIVE_LOW>;
+		vdd-supply = <&ldo25m_tsp_dvdd>;
+		avdd-supply = <&ldo4m_ts_avdd>;
+		spi-max-frequency = <1000000>;
+	};
+};
+
 &ufs_0 {
 	vcc-supply = <&ufs_0_fixed_vcc_reg>;
 	status = "okay";
 };
 
 &ufs_0_phy {
+	status = "okay";
+};
+
+&usi2_hsi0 {
+	assigned-clocks = <&cmu_hsi0 CLK_MOUT_HSI0_USI2>;
+	assigned-clock-parents = <&ext_24_5m>;
+	samsung,mode = <USI_MODE_SPI>;
 	status = "okay";
 };
