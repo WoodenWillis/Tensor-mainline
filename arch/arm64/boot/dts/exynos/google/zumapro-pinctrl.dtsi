@@ -5,6 +5,17 @@
  * Copyright 2026 Will
  */
 
+&pinctrl_custom_alive {
+	gpn0: gpn0-gpio-bank {
+		gpio-controller;
+		#gpio-cells = <2>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+		interrupt-parent = <&gic>;
+		interrupts = <GIC_SPI 0 IRQ_TYPE_LEVEL_HIGH 0>;
+	};
+};
+
 &pinctrl_hsi1 {
 	gph0: gph0-gpio-bank {
 		gpio-controller;
