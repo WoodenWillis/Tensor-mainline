@@ -44,6 +44,22 @@
 	status = "okay";
 };
 
+&s2mpg14_pmic {
+	regulators {
+		ldo4m_ts_avdd: ldo4m {
+			regulator-name = "L4M_TS_AVDD";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+		};
+
+		ldo25m_tsp_dvdd: ldo25m {
+			regulator-name = "L25M_TSP_DVDD";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+		};
+	};
+};
+
 &ufs_0 {
 	vcc-supply = <&ufs_0_fixed_vcc_reg>;
 	status = "okay";
