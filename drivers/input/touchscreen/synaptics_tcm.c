@@ -20,6 +20,7 @@
 #include <linux/unaligned.h>
 
 #define TCM_XFER_SIZE			63
+#define TCM_MSG_SIZE			512
 #define TCM_HEADER_SIZE			4
 #define TCM_MARKER			0xa5
 
@@ -29,6 +30,7 @@
 
 #define TCM_STATUS_IDLE			0x00
 #define TCM_STATUS_OK			0x01
+#define TCM_STATUS_CONTINUED_READ	0x03
 #define TCM_REPORT_IDENTIFY		0x10
 #define TCM_REPORT_TOUCH		0x11
 
@@ -61,23 +63,24 @@ struct tcm {
 	struct touchscreen_properties prop;
 	u16 max_x;
 	u16 max_y;
+	u8 msg[TCM_MSG_SIZE];
 	u8 tx[TCM_XFER_SIZE] __aligned(ARCH_DMA_MINALIGN);
 	u8 rx[TCM_XFER_SIZE] __aligned(ARCH_DMA_MINALIGN);
 };
 
 static u8 tcm_code(struct tcm *ts)
 {
-	return ts->rx[1];
+	return ts->msg[1];
 }
 
 static u16 tcm_len(struct tcm *ts)
 {
-	return get_unaligned_le16(&ts->rx[2]);
+	return get_unaligned_le16(&ts->msg[2]);
 }
 
 static u8 *tcm_payload(struct tcm *ts)
 {
-	return &ts->rx[TCM_HEADER_SIZE];
+	return &ts->msg[TCM_HEADER_SIZE];
 }
 
 static int tcm_xfer(struct tcm *ts, size_t len)
@@ -105,13 +108,48 @@ static int tcm_write(struct tcm *ts, u8 cmd, const u8 *payload, u16 len)
 	return tcm_xfer(ts, size);
 }
 
+static size_t tcm_msg_size(struct tcm *ts)
+{
+	return TCM_HEADER_SIZE + tcm_len(ts) + 1;
+}
+
+static int tcm_read_chunk(struct tcm *ts)
+{
+	memset(ts->tx, 0xff, sizeof(ts->tx));
+
+	return tcm_xfer(ts, sizeof(ts->rx));
+}
+
+static int tcm_read_continued(struct tcm *ts, size_t off)
+{
+	size_t n;
+	int ret;
+
+	while (off < tcm_msg_size(ts)) {
+		ret = tcm_read_chunk(ts);
+		if (ret)
+			return ret;
+
+		if (ts->rx[0] != TCM_MARKER ||
+		    ts->rx[1] != TCM_STATUS_CONTINUED_READ) {
+			dev_dbg(&ts->spi->dev, "bad continued read %*ph\n",
+				4, ts->rx);
+			return -EIO;
+		}
+
+		n = min(tcm_msg_size(ts) - off, sizeof(ts->rx) - 2);
+		memcpy(&ts->msg[off], &ts->rx[2], n);
+		off += n;
+	}
+
+	return 0;
+}
+
 static int tcm_read(struct tcm *ts)
 {
 	int ret;
 
-	memset(ts->tx, 0xff, sizeof(ts->tx));
-
-	ret = tcm_xfer(ts, sizeof(ts->rx));
+	ret = tcm_read_chunk(ts);
 	if (ret)
 		return ret;
 
@@ -120,13 +158,15 @@ static int tcm_read(struct tcm *ts)
 		return -EIO;
 	}
 
-	if (TCM_HEADER_SIZE + tcm_len(ts) + 1 > sizeof(ts->rx)) {
+	memcpy(ts->msg, ts->rx, sizeof(ts->rx));
+
+	if (tcm_msg_size(ts) > sizeof(ts->msg)) {
 		dev_dbg(&ts->spi->dev, "message %#04x too long (%u)\n",
 			tcm_code(ts), tcm_len(ts));
 		return -EMSGSIZE;
 	}
 
-	return 0;
+	return tcm_read_continued(ts, sizeof(ts->rx));
 }
 
 static bool tcm_is_status(struct tcm *ts)
@@ -184,7 +224,7 @@ static int tcm_identify(struct tcm *ts)
 		return ret;
 
 	if (!tcm_is_identify(ts)) {
-		dev_err(dev, "no identify report: %*ph\n", 8, ts->rx);
+		dev_err(dev, "no identify report: %*ph\n", 8, ts->msg);
 		return -ENODEV;
 	}
 
@@ -259,7 +299,7 @@ static irqreturn_t tcm_irq(int irq, void *dev_id)
 		return IRQ_HANDLED;
 
 	print_hex_dump_debug("tcm: ", DUMP_PREFIX_OFFSET, 16, 1,
-			     ts->rx, sizeof(ts->rx), false);
+			     ts->msg, tcm_msg_size(ts), false);
 
 	if (tcm_code(ts) == TCM_REPORT_TOUCH)
 		tcm_report_touch(ts);
