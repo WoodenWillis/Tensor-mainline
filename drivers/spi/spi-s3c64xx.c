@@ -871,14 +871,15 @@ static int s3c64xx_spi_transfer_one(struct spi_controller *host,
 
 		}
 
+		/* Start the signals */
+		s3c64xx_spi_set_cs(spi, true);
+		spi_delay_exec(&spi->cs_setup, xfer);
+
 		spin_lock_irqsave(&sdd->lock, flags);
 
 		/* Pending only which is to be done */
 		sdd->state &= ~RXBUSY;
 		sdd->state &= ~TXBUSY;
-
-		/* Start the signals */
-		s3c64xx_spi_set_cs(spi, true);
 
 		status = s3c64xx_enable_datapath(sdd, xfer, use_dma);
 
