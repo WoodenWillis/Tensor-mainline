@@ -18,6 +18,7 @@ properties:
     oneOf:
       - enum:
           - google,gs101-spi
+          - google,zumapro-spi
           - samsung,s3c6410-spi
           - samsung,s5pv210-spi # for S5PV210 and S5PC110
           - samsung,exynos4210-spi
