@@ -377,6 +377,11 @@ static void s3c64xx_spi_set_cs(struct spi_device *spi, bool enable)
 	}
 }
 
+static void s3c64xx_spi_set_cs_level(struct spi_device *spi, bool level)
+{
+	s3c64xx_spi_set_cs(spi, level == !!(spi->mode & SPI_CS_HIGH));
+}
+
 static int s3c64xx_spi_prepare_transfer(struct spi_controller *spi)
 {
 	struct s3c64xx_spi_driver_data *sdd = spi_controller_get_devdata(spi);
@@ -1301,6 +1306,7 @@ static int s3c64xx_spi_probe(struct platform_device *pdev)
 	host->prepare_transfer_hardware = s3c64xx_spi_prepare_transfer;
 	host->unprepare_transfer_hardware = s3c64xx_spi_unprepare_transfer;
 	host->prepare_message = s3c64xx_spi_prepare_message;
+	host->set_cs = s3c64xx_spi_set_cs_level;
 	host->transfer_one = s3c64xx_spi_transfer_one;
 	host->max_transfer_size = s3c64xx_spi_max_transfer_size;
 	host->num_chipselect = sci->num_cs;
