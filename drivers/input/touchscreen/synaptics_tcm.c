@@ -11,6 +11,7 @@
 #include <linux/input/mt.h>
 #include <linux/input/touchscreen.h>
 #include <linux/interrupt.h>
+#include <linux/jiffies.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
 #include <linux/regulator/consumer.h>
@@ -26,6 +27,7 @@
 #define TCM_CMD_ENABLE_REPORT		0x05
 #define TCM_CMD_GET_APPLICATION_INFO	0x20
 
+#define TCM_STATUS_IDLE			0x00
 #define TCM_STATUS_OK			0x01
 #define TCM_REPORT_IDENTIFY		0x10
 #define TCM_REPORT_TOUCH		0x11
@@ -45,7 +47,8 @@
 #define TCM_TOUCH_Y			14
 #define TCM_TOUCH_Z			16
 
-#define TCM_CMD_DELAY_US		400
+#define TCM_POLL_DELAY_MS		10
+#define TCM_RESPONSE_TIMEOUT_MS		3000
 #define TCM_POWER_DELAY_MS		200
 #define TCM_RESET_ACTIVE_US		2000
 #define TCM_RESET_DELAY_MS		50
@@ -126,6 +129,26 @@ static int tcm_read(struct tcm *ts)
 	return 0;
 }
 
+static bool tcm_is_status(struct tcm *ts)
+{
+	return tcm_code(ts) != TCM_STATUS_IDLE &&
+	       tcm_code(ts) < TCM_REPORT_IDENTIFY;
+}
+
+static int tcm_wait_response(struct tcm *ts)
+{
+	unsigned long deadline = jiffies +
+				 msecs_to_jiffies(TCM_RESPONSE_TIMEOUT_MS);
+
+	do {
+		msleep(TCM_POLL_DELAY_MS);
+		if (!tcm_read(ts) && tcm_is_status(ts))
+			return 0;
+	} while (time_before(jiffies, deadline));
+
+	return -ETIMEDOUT;
+}
+
 static int tcm_command(struct tcm *ts, u8 cmd, const u8 *payload, u16 len)
 {
 	int ret;
@@ -134,14 +157,17 @@ static int tcm_command(struct tcm *ts, u8 cmd, const u8 *payload, u16 len)
 	if (ret)
 		return ret;
 
-	fsleep(TCM_CMD_DELAY_US);
+	ret = tcm_wait_response(ts);
+	if (ret)
+		dev_dbg(&ts->spi->dev, "no response to %#04x\n", cmd);
 
-	return tcm_read(ts);
+	return ret;
 }
 
 static bool tcm_is_identify(struct tcm *ts)
 {
-	return tcm_code(ts) == TCM_REPORT_IDENTIFY &&
+	return (tcm_code(ts) == TCM_REPORT_IDENTIFY ||
+		tcm_code(ts) == TCM_STATUS_OK) &&
 	       tcm_len(ts) >= TCM_IDENTIFY_MIN_LEN;
 }
 
