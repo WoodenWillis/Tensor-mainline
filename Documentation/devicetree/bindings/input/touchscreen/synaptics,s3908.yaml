@@ -36,6 +36,7 @@ properties:
   avdd-supply:
     description: Analog power supply regulator on the AVDD pin
 
+  spi-cs-setup-delay-ns: true
   spi-max-frequency: true
   touchscreen-inverted-x: true
   touchscreen-inverted-y: true
