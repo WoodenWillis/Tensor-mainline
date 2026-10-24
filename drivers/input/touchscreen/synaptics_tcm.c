@@ -27,6 +27,7 @@
 #define TCM_CMD_IDENTIFY		0x02
 #define TCM_CMD_ENABLE_REPORT		0x05
 #define TCM_CMD_GET_APPLICATION_INFO	0x20
+#define TCM_CMD_GET_TOUCH_REPORT_CONFIG	0x25
 
 #define TCM_STATUS_IDLE			0x00
 #define TCM_STATUS_OK			0x01
@@ -255,6 +256,15 @@ static int tcm_get_app_info(struct tcm *ts)
 	return 0;
 }
 
+static void tcm_dump_touch_report_config(struct tcm *ts)
+{
+	if (tcm_command(ts, TCM_CMD_GET_TOUCH_REPORT_CONFIG, NULL, 0))
+		return;
+
+	print_hex_dump_debug("tcm config: ", DUMP_PREFIX_OFFSET, 16, 1,
+			     ts->msg, tcm_msg_size(ts), false);
+}
+
 static int tcm_enable_touch_report(struct tcm *ts)
 {
 	u8 report = TCM_REPORT_TOUCH;
@@ -402,6 +412,9 @@ static int tcm_probe(struct spi_device *spi)
 	ret = tcm_get_app_info(ts);
 	if (ret)
 		dev_warn(dev, "no application info (%d)\n", ret);
+
+	/* TODO(will): drop once the report layout is decoded from it */
+	tcm_dump_touch_report_config(ts);
 
 	ret = tcm_enable_touch_report(ts);
 	if (ret)
