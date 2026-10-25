@@ -45,10 +45,19 @@
 #define TCM_APP_INFO_MAX_Y		34
 #define TCM_APP_INFO_MIN_LEN		36
 
-#define TCM_TOUCH_PRESENT_LEN		0x17
-#define TCM_TOUCH_X			12
-#define TCM_TOUCH_Y			14
-#define TCM_TOUCH_Z			16
+#define TCM_TOUCH_NUM_OBJECTS		10
+#define TCM_TOUCH_OBJECTS		11
+#define TCM_TOUCH_OBJECT_SIZE		12
+#define TCM_TOUCH_MAX_OBJECTS		16
+
+#define TCM_OBJECT_INDEX_CLASS		0
+#define TCM_OBJECT_X			1
+#define TCM_OBJECT_Y			3
+#define TCM_OBJECT_Z			5
+
+#define TCM_CLASS_FINGER		1
+#define TCM_CLASS_GLOVED_OBJECT		2
+#define TCM_CLASS_PALM			6
 
 #define TCM_POLL_DELAY_MS		10
 #define TCM_RESPONSE_TIMEOUT_MS		3000
@@ -256,13 +265,46 @@ static int tcm_get_app_info(struct tcm *ts)
 	return 0;
 }
 
-static void tcm_dump_touch_report_config(struct tcm *ts)
-{
-	if (tcm_command(ts, TCM_CMD_GET_TOUCH_REPORT_CONFIG, NULL, 0))
-		return;
+static const u8 tcm_touch_report_config[] = {
+	0x10, 8,	/* GESTURE_ID */
+	0x1b, 56,	/* GESTURE_DATA */
+	0x1e, 8,	/* SENSING_MODE */
+	0x17, 8,	/* NSM_STATE */
+	0x18, 8,	/* NUM_OF_ACTIVE_OBJECTS */
+	0x04,		/* PAD_TO_NEXT_BYTE */
+	0x01,		/* FOREACH_ACTIVE_OBJECT */
+	0x06, 4,	/* OBJECT_N_INDEX */
+	0x07, 4,	/* OBJECT_N_CLASSIFICATION */
+	0x08, 16,	/* OBJECT_N_X_POSITION */
+	0x09, 16,	/* OBJECT_N_Y_POSITION */
+	0x0a, 16,	/* OBJECT_N_Z */
+	0x0b, 8,	/* OBJECT_N_X_WIDTH */
+	0x0c, 8,	/* OBJECT_N_Y_WIDTH */
+	0xd2, 8,	/* CUSTOM_MAJOR */
+	0xd3, 8,	/* CUSTOM_MINOR */
+	0xd1, 8,	/* CUSTOM_ANGLE */
+	0x03,		/* FOREACH_END */
+	0x00,		/* END */
+};
 
-	print_hex_dump_debug("tcm config: ", DUMP_PREFIX_OFFSET, 16, 1,
-			     ts->msg, tcm_msg_size(ts), false);
+static int tcm_check_touch_report_config(struct tcm *ts)
+{
+	int ret;
+
+	ret = tcm_command(ts, TCM_CMD_GET_TOUCH_REPORT_CONFIG, NULL, 0);
+	if (ret)
+		return ret;
+
+	if (tcm_code(ts) != TCM_STATUS_OK ||
+	    tcm_len(ts) < sizeof(tcm_touch_report_config) ||
+	    memcmp(tcm_payload(ts), tcm_touch_report_config,
+		   sizeof(tcm_touch_report_config))) {
+		dev_err(&ts->spi->dev, "unsupported touch report config %*ph\n",
+			(int)min_t(u16, tcm_len(ts), 64), tcm_payload(ts));
+		return -EINVAL;
+	}
+
+	return 0;
 }
 
 static int tcm_enable_touch_report(struct tcm *ts)
@@ -285,16 +327,42 @@ static void tcm_report_touch(struct tcm *ts)
 {
 	struct input_dev *input = ts->input;
 	const u8 *p = tcm_payload(ts);
-	bool down = tcm_len(ts) >= TCM_TOUCH_PRESENT_LEN;
+	const u8 *obj;
+	unsigned int n, i;
+	int tool;
 
-	/* TODO(will): decode all active objects, layout not captured yet */
-	input_mt_slot(input, 0);
-	input_mt_report_slot_state(input, MT_TOOL_FINGER, down);
-	if (down) {
+	if (tcm_len(ts) < TCM_TOUCH_OBJECTS)
+		return;
+
+	n = p[TCM_TOUCH_NUM_OBJECTS];
+	if (tcm_len(ts) < TCM_TOUCH_OBJECTS + n * TCM_TOUCH_OBJECT_SIZE) {
+		dev_dbg(&ts->spi->dev, "short touch report (%u objects, %u bytes)\n",
+			n, tcm_len(ts));
+		return;
+	}
+
+	for (i = 0; i < n; i++) {
+		obj = &p[TCM_TOUCH_OBJECTS + i * TCM_TOUCH_OBJECT_SIZE];
+
+		switch (obj[TCM_OBJECT_INDEX_CLASS] >> 4) {
+		case TCM_CLASS_FINGER:
+		case TCM_CLASS_GLOVED_OBJECT:
+			tool = MT_TOOL_FINGER;
+			break;
+		case TCM_CLASS_PALM:
+			tool = MT_TOOL_PALM;
+			break;
+		default:
+			continue;
+		}
+
+		input_mt_slot(input, obj[TCM_OBJECT_INDEX_CLASS] & 0x0f);
+		input_mt_report_slot_state(input, tool, true);
 		touchscreen_report_pos(input, &ts->prop,
-				       get_unaligned_le16(&p[TCM_TOUCH_X]),
-				       get_unaligned_le16(&p[TCM_TOUCH_Y]), true);
-		input_report_abs(input, ABS_MT_PRESSURE, p[TCM_TOUCH_Z]);
+				       get_unaligned_le16(&obj[TCM_OBJECT_X]),
+				       get_unaligned_le16(&obj[TCM_OBJECT_Y]), true);
+		input_report_abs(input, ABS_MT_PRESSURE,
+				 get_unaligned_le16(&obj[TCM_OBJECT_Z]));
 	}
 
 	input_mt_sync_frame(input);
@@ -361,14 +429,16 @@ static int tcm_setup_input(struct tcm *ts)
 
 	input_set_abs_params(input, ABS_MT_POSITION_X, 0, ts->max_x, 0, 0);
 	input_set_abs_params(input, ABS_MT_POSITION_Y, 0, ts->max_y, 0, 0);
-	input_set_abs_params(input, ABS_MT_PRESSURE, 0, U8_MAX, 0, 0);
+	input_set_abs_params(input, ABS_MT_PRESSURE, 0, U16_MAX, 0, 0);
+	input_set_abs_params(input, ABS_MT_TOOL_TYPE, 0, MT_TOOL_MAX, 0, 0);
 	touchscreen_parse_properties(input, true, &ts->prop);
 
 	if (!input_abs_get_max(input, ABS_MT_POSITION_X) ||
 	    !input_abs_get_max(input, ABS_MT_POSITION_Y))
 		return dev_err_probe(dev, -EINVAL, "no touchscreen size\n");
 
-	ret = input_mt_init_slots(input, 1, INPUT_MT_DIRECT);
+	ret = input_mt_init_slots(input, TCM_TOUCH_MAX_OBJECTS,
+				  INPUT_MT_DIRECT | INPUT_MT_DROP_UNUSED);
 	if (ret)
 		return ret;
 
@@ -413,8 +483,9 @@ static int tcm_probe(struct spi_device *spi)
 	if (ret)
 		dev_warn(dev, "no application info (%d)\n", ret);
 
-	/* TODO(will): drop once the report layout is decoded from it */
-	tcm_dump_touch_report_config(ts);
+	ret = tcm_check_touch_report_config(ts);
+	if (ret)
+		return dev_err_probe(dev, ret, "failed to check touch report config\n");
 
 	ret = tcm_enable_touch_report(ts);
 	if (ret)
