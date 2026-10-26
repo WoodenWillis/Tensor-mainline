@@ -60,6 +60,9 @@
 #define TCM_CLASS_PALM			6
 
 #define TCM_POLL_DELAY_MS		10
+#define TCM_READ_RETRIES		10
+#define TCM_READ_RETRY_MIN_US		5000
+#define TCM_READ_RETRY_MAX_US		10000
 #define TCM_RESPONSE_TIMEOUT_MS		3000
 #define TCM_POWER_DELAY_MS		200
 #define TCM_RESET_ACTIVE_US		2000
@@ -125,9 +128,20 @@ static size_t tcm_msg_size(struct tcm *ts)
 
 static int tcm_read_chunk(struct tcm *ts)
 {
+	int ret, i;
+
 	memset(ts->tx, 0xff, sizeof(ts->tx));
 
-	return tcm_xfer(ts, sizeof(ts->rx));
+	for (i = 0; i < TCM_READ_RETRIES; i++) {
+		ret = tcm_xfer(ts, sizeof(ts->rx));
+		if (ret || ts->rx[0] == TCM_MARKER)
+			return ret;
+
+		usleep_range(TCM_READ_RETRY_MIN_US, TCM_READ_RETRY_MAX_US);
+	}
+
+	dev_dbg(&ts->spi->dev, "bad marker %*ph\n", 4, ts->rx);
+	return -EIO;
 }
 
 static int tcm_read_continued(struct tcm *ts, size_t off)
@@ -140,8 +154,7 @@ static int tcm_read_continued(struct tcm *ts, size_t off)
 		if (ret)
 			return ret;
 
-		if (ts->rx[0] != TCM_MARKER ||
-		    ts->rx[1] != TCM_STATUS_CONTINUED_READ) {
+		if (ts->rx[1] != TCM_STATUS_CONTINUED_READ) {
 			dev_dbg(&ts->spi->dev, "bad continued read %*ph\n",
 				4, ts->rx);
 			return -EIO;
@@ -162,11 +175,6 @@ static int tcm_read(struct tcm *ts)
 	ret = tcm_read_chunk(ts);
 	if (ret)
 		return ret;
-
-	if (ts->rx[0] != TCM_MARKER) {
-		dev_dbg(&ts->spi->dev, "bad marker %*ph\n", 4, ts->rx);
-		return -EIO;
-	}
 
 	memcpy(ts->msg, ts->rx, sizeof(ts->rx));
 
