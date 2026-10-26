@@ -120,7 +120,7 @@ static int tcm_write(struct tcm *ts, u8 cmd, const u8 *payload, u16 len)
 
 static size_t tcm_msg_size(struct tcm *ts)
 {
-	return TCM_HEADER_SIZE + tcm_len(ts) + 1;
+	return TCM_HEADER_SIZE + tcm_len(ts);
 }
 
 static int tcm_read_chunk(struct tcm *ts)
