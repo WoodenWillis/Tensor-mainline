@@ -832,6 +832,12 @@
 		compatible = "google,zumapro-pinctrl";
 		reg = <0x0 0x154d0000 0x1000>;
 		status = "disabled";
+
+		wakeup-interrupt-controller {
+			compatible = "google,gs101-wakeup-eint",
+				     "samsung,exynos850-wakeup-eint",
+				     "samsung,exynos7-wakeup-eint";
+		};
 	};
 
 	pinctrl_custom_alive: pinctrl@15060000 {
