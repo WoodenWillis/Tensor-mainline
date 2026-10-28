@@ -36,7 +36,20 @@
 #define GS101_CPUCL0_SENSOR_MASK (EXYNOS_TMU_SENSOR(1) |	\
 				  EXYNOS_TMU_SENSOR(2))
 
+#define ZUMAPRO_BIG_SENSOR_MASK (EXYNOS_TMU_SENSOR(1) |	\
+				 EXYNOS_TMU_SENSOR(2))
+#define ZUMAPRO_MID_SENSOR_MASK (EXYNOS_TMU_SENSOR(4) |	\
+				 EXYNOS_TMU_SENSOR(5) |	\
+				 EXYNOS_TMU_SENSOR(6) |	\
+				 EXYNOS_TMU_SENSOR(7))
+#define ZUMAPRO_LIT_SENSOR_MASK (EXYNOS_TMU_SENSOR(8) |	\
+				 EXYNOS_TMU_SENSOR(9))
+#define ZUMAPRO_GPU_SENSOR_MASK (EXYNOS_TMU_SENSOR(10) |	\
+				 EXYNOS_TMU_SENSOR(11) |	\
+				 EXYNOS_TMU_SENSOR(12))
+
 #define GS101_REG_INTPEND(i)		((i) * 0x50 + 0xf8)
+#define ZUMAPRO_REG_INTPEND(i)		((i) * 0x40 + 0x128)
 
 enum {
 	P0_INTPEND,
@@ -83,6 +96,7 @@ struct acpm_tmu_priv {
 };
 
 struct acpm_tmu_driver_data {
+	const struct regmap_config *regmap_config;
 	const struct reg_field *reg_fields;
 	const struct acpm_tmu_sensor_group *sensor_groups;
 	unsigned int num_sensor_groups;
@@ -129,9 +143,63 @@ static const struct regmap_config gs101_regmap_config = {
 };
 
 static const struct acpm_tmu_driver_data acpm_tmu_gs101 = {
+	.regmap_config = &gs101_regmap_config,
 	.reg_fields = gs101_reg_fields,
 	.sensor_groups = gs101_sensor_groups,
 	.num_sensor_groups = ARRAY_SIZE(gs101_sensor_groups),
+	.mbox_chan_id = 9,
+};
+
+static const struct acpm_tmu_sensor_group zumapro_top_sensor_groups[] = {
+	ACPM_TMU_SENSOR_GROUP(ZUMAPRO_BIG_SENSOR_MASK, 0),
+	ACPM_TMU_SENSOR_GROUP(ZUMAPRO_MID_SENSOR_MASK, 1),
+	ACPM_TMU_SENSOR_GROUP(ZUMAPRO_LIT_SENSOR_MASK, 2),
+};
+
+static const struct acpm_tmu_sensor_group zumapro_sub_sensor_groups[] = {
+	ACPM_TMU_SENSOR_GROUP(ZUMAPRO_GPU_SENSOR_MASK, 3),
+};
+
+static const struct reg_field zumapro_reg_fields[REG_INTPEND_COUNT] = {
+	[P0_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(0), 0, 31),
+	[P1_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(1), 0, 31),
+	[P2_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(2), 0, 31),
+	[P3_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(3), 0, 31),
+	[P4_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(4), 0, 31),
+	[P5_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(5), 0, 31),
+	[P6_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(6), 0, 31),
+	[P7_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(7), 0, 31),
+	[P8_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(8), 0, 31),
+	[P9_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(9), 0, 31),
+	[P10_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(10), 0, 31),
+	[P11_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(11), 0, 31),
+	[P12_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(12), 0, 31),
+	[P13_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(13), 0, 31),
+	[P14_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(14), 0, 31),
+	[P15_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(15), 0, 31),
+};
+
+static const struct regmap_config zumapro_regmap_config = {
+	.reg_bits = 32,
+	.reg_stride = 4,
+	.val_bits = 32,
+	.use_relaxed_mmio = true,
+	.max_register = ZUMAPRO_REG_INTPEND(15),
+};
+
+static const struct acpm_tmu_driver_data acpm_tmu_zumapro_top = {
+	.regmap_config = &zumapro_regmap_config,
+	.reg_fields = zumapro_reg_fields,
+	.sensor_groups = zumapro_top_sensor_groups,
+	.num_sensor_groups = ARRAY_SIZE(zumapro_top_sensor_groups),
+	.mbox_chan_id = 9,
+};
+
+static const struct acpm_tmu_driver_data acpm_tmu_zumapro_sub = {
+	.regmap_config = &zumapro_regmap_config,
+	.reg_fields = zumapro_reg_fields,
+	.sensor_groups = zumapro_sub_sensor_groups,
+	.num_sensor_groups = ARRAY_SIZE(zumapro_sub_sensor_groups),
 	.mbox_chan_id = 9,
 };
 
@@ -396,20 +464,26 @@ static irqreturn_t acpm_tmu_thread_fn(int irq, void *id)
 }
 
 static const struct of_device_id acpm_tmu_match[] = {
-	{ .compatible = "google,gs101-tmu-top" },
+	{ .compatible = "google,gs101-tmu-top", .data = &acpm_tmu_gs101 },
+	{ .compatible = "google,zumapro-tmu-sub", .data = &acpm_tmu_zumapro_sub },
+	{ .compatible = "google,zumapro-tmu-top", .data = &acpm_tmu_zumapro_top },
 	{ /* sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, acpm_tmu_match);
 
 static int acpm_tmu_probe(struct platform_device *pdev)
 {
-	const struct acpm_tmu_driver_data *data = &acpm_tmu_gs101;
+	const struct acpm_tmu_driver_data *data;
 	struct acpm_handle *acpm_handle;
 	struct device *dev = &pdev->dev;
 	struct acpm_tmu_priv *priv;
 	struct regmap *regmap;
 	void __iomem *base;
 	int i, ret;
+
+	data = of_device_get_match_data(dev);
+	if (!data)
+		return -ENODEV;
 
 	acpm_handle = devm_acpm_get_by_phandle(dev);
 	if (IS_ERR(acpm_handle))
@@ -433,7 +507,7 @@ static int acpm_tmu_probe(struct platform_device *pdev)
 	if (IS_ERR(base))
 		return dev_err_probe(dev, PTR_ERR(base), "Failed to ioremap resource\n");
 
-	regmap = devm_regmap_init_mmio(dev, base, &gs101_regmap_config);
+	regmap = devm_regmap_init_mmio(dev, base, data->regmap_config);
 	if (IS_ERR(regmap))
 		return dev_err_probe(dev, PTR_ERR(regmap), "Failed to init regmap\n");
 
