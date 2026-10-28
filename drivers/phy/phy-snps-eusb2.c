@@ -24,6 +24,7 @@
 #define FSEL_48_MHZ_VAL			(0x2)
 
 #define EXYNOS_USB_PHY_CFG_PLLCFG0	(0x8)
+#define EXYNOS_PHY_CFG_PLL_CPBIAS_CNTRL_MASK	GENMASK(6, 0)
 #define PHY_CFG_PLL_FB_DIV_19_8_MASK	GENMASK(19, 8)
 #define DIV_19_8_19_2_MHZ_VAL		(0x170)
 #define DIV_19_8_20_MHZ_VAL		(0x160)
@@ -157,6 +158,7 @@ struct snps_eusb2_phy_drvdata {
 	int (*phy_init)(struct phy *p);
 	const char * const *clk_names;
 	int num_clks;
+	bool clear_pll_cpbias;
 };
 
 struct snps_eusb2_hsphy {
@@ -332,6 +334,10 @@ static int exynos_snps_eusb2_hsphy_init(struct phy *p)
 	if (ret)
 		return ret;
 
+	if (phy->data->clear_pll_cpbias)
+		snps_eusb2_hsphy_write_mask(phy->base, EXYNOS_USB_PHY_CFG_PLLCFG0,
+					    EXYNOS_PHY_CFG_PLL_CPBIAS_CNTRL_MASK, 0);
+
 	/* default parameter: tx fsls-vref */
 	snps_eusb2_hsphy_write_mask(phy->base, EXYNOS_PHY_CFG_TX,
 				    EXYNOS_PHY_CFG_TX_FSLS_VREF_TUNE_MASK,
@@ -361,6 +367,13 @@ static const struct snps_eusb2_phy_drvdata exynos2200_snps_eusb2_phy = {
 	.phy_init	= exynos_snps_eusb2_hsphy_init,
 	.clk_names	= exynos_eusb2_hsphy_clock_names,
 	.num_clks	= ARRAY_SIZE(exynos_eusb2_hsphy_clock_names),
+};
+
+static const struct snps_eusb2_phy_drvdata zumapro_snps_eusb2_phy = {
+	.phy_init		= exynos_snps_eusb2_hsphy_init,
+	.clk_names		= exynos_eusb2_hsphy_clock_names,
+	.num_clks		= ARRAY_SIZE(exynos_eusb2_hsphy_clock_names),
+	.clear_pll_cpbias	= true,
 };
 
 static int qcom_snps_eusb2_hsphy_init(struct phy *p)
@@ -613,6 +626,9 @@ static const struct of_device_id snps_eusb2_hsphy_of_match_table[] = {
 	}, {
 		.compatible = "samsung,exynos2200-eusb2-phy",
 		.data = &exynos2200_snps_eusb2_phy,
+	}, {
+		.compatible = "google,zumapro-eusb2-phy",
+		.data = &zumapro_snps_eusb2_phy,
 	}, {
 		/* sentinel */
 	}
