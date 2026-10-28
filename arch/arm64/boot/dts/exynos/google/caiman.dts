@@ -145,6 +145,23 @@
 	status = "okay";
 };
 
+&usb {
+	status = "okay";
+};
+
+&usb32drd {
+	status = "okay";
+};
+
+&usb_dwc3 {
+	dr_mode = "peripheral";
+	maximum-speed = "high-speed";
+};
+
+&usb_hsphy {
+	status = "okay";
+};
+
 &usi2_hsi0 {
 	assigned-clocks = <&cmu_hsi0 CLK_MOUT_HSI0_USI2>;
 	assigned-clock-parents = <&ext_24_5m>;
