@@ -828,6 +828,55 @@
 		};
 	};
 
+	usb32drd: phy@11100000 {
+		compatible = "google,zumapro-usb32drd-phy";
+		reg = <0x0 0x11100000 0x200>;
+		clocks = <&cmu_hsi0 CLK_GOUT_HSI0_USB32DRD_I_USBSUBCTL_APB_PCLK>;
+		clock-names = "phy";
+		#phy-cells = <1>;
+		phys = <&usb_hsphy>;
+		phy-names = "hs";
+		samsung,pmu-syscon = <&pmu_system_controller>;
+		status = "disabled";
+	};
+
+	usb_hsphy: phy@11110000 {
+		compatible = "google,zumapro-eusb2-phy";
+		reg = <0x0 0x11110000 0x200>;
+		clocks = <&cmu_hsi0 CLK_GOUT_HSI0_USB32DRD_I_EUSB_PHY_REFCLK_26>,
+			 <&cmu_hsi0 CLK_GOUT_HSI0_USB32DRD_I_EUSB_CTRL_PCLK>,
+			 <&cmu_hsi0 CLK_GOUT_HSI0_USB32DRD_I_EUSB_APB_CLK>;
+		clock-names = "ref", "bus", "ctrl";
+		#phy-cells = <0>;
+		status = "disabled";
+	};
+
+	usb: usb@11210000 {
+		compatible = "google,zumapro-dwusb3", "samsung,exynos2200-dwusb3";
+		ranges = <0x0 0x0 0x11210000 0x10000>;
+		clocks = <&cmu_hsi0 CLK_GOUT_HSI0_USB32DRD_I_USBLINK_ACLK>;
+		clock-names = "link_aclk";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		status = "disabled";
+
+		usb_dwc3: usb@0 {
+			compatible = "snps,dwc3";
+			reg = <0x0 0x10000>;
+			clocks = <&cmu_hsi0 CLK_GOUT_HSI0_USB32DRD_I_USB32DRD_REF_CLK_40>;
+			clock-names = "ref";
+			interrupts = <GIC_SPI 402 IRQ_TYPE_LEVEL_HIGH 0>;
+			phys = <&usb32drd 0>;
+			phy-names = "usb2-phy";
+			snps,dis-u1-entry-quirk;
+			snps,dis-u2-entry-quirk;
+			snps,dis-u2-freeclk-exists-quirk;
+			snps,has-lpm-erratum;
+			snps,quirk-frame-length-adjustment = <0x20>;
+			snps,usb2-gadget-lpm-disable;
+		};
+	};
+
 	pinctrl_alive: pinctrl@154d0000 {
 		compatible = "google,zumapro-pinctrl";
 		reg = <0x0 0x154d0000 0x1000>;
