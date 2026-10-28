@@ -70,6 +70,7 @@
 			cpu-idle-states = <&hayes_cpu_sleep>;
 			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL0>;
 			enable-method = "psci";
+			#cooling-cells = <2>;
 			operating-points-v2 = <&cpucl0_opp_table>;
 		};
 
@@ -82,6 +83,7 @@
 			cpu-idle-states = <&hayes_cpu_sleep>;
 			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL0>;
 			enable-method = "psci";
+			#cooling-cells = <2>;
 			operating-points-v2 = <&cpucl0_opp_table>;
 		};
 
@@ -94,6 +96,7 @@
 			cpu-idle-states = <&hayes_cpu_sleep>;
 			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL0>;
 			enable-method = "psci";
+			#cooling-cells = <2>;
 			operating-points-v2 = <&cpucl0_opp_table>;
 		};
 
@@ -106,6 +109,7 @@
 			cpu-idle-states = <&hayes_cpu_sleep>;
 			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL0>;
 			enable-method = "psci";
+			#cooling-cells = <2>;
 			operating-points-v2 = <&cpucl0_opp_table>;
 		};
 
@@ -118,6 +122,7 @@
 			cpu-idle-states = <&hunter_cpu_sleep>;
 			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL1>;
 			enable-method = "psci";
+			#cooling-cells = <2>;
 			operating-points-v2 = <&cpucl1_opp_table>;
 		};
 
@@ -130,6 +135,7 @@
 			cpu-idle-states = <&hunter_cpu_sleep>;
 			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL1>;
 			enable-method = "psci";
+			#cooling-cells = <2>;
 			operating-points-v2 = <&cpucl1_opp_table>;
 		};
 
@@ -142,6 +148,7 @@
 			cpu-idle-states = <&hunter_cpu_sleep>;
 			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL1>;
 			enable-method = "psci";
+			#cooling-cells = <2>;
 			operating-points-v2 = <&cpucl1_opp_table>;
 		};
 
@@ -154,6 +161,7 @@
 			cpu-idle-states = <&hunterelp_cpu_sleep>;
 			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL2>;
 			enable-method = "psci";
+			#cooling-cells = <2>;
 			operating-points-v2 = <&cpucl2_opp_table>;
 		};
 
@@ -458,6 +466,24 @@
 		clock-names = "oscclk", "bus";
 	};
 
+	tmu_top: thermal-sensor@100a0000 {
+		compatible = "google,zumapro-tmu-top";
+		reg = <0x0 0x100a0000 0x800>;
+		clocks = <&cmu_misc CLK_GOUT_MISC_TMU_TOP_PCLK>;
+		interrupts = <GIC_SPI 787 IRQ_TYPE_LEVEL_HIGH 0>;
+		samsung,acpm-ipc = <&acpm_ipc>;
+		#thermal-sensor-cells = <1>;
+	};
+
+	tmu_sub: thermal-sensor@100b0000 {
+		compatible = "google,zumapro-tmu-sub";
+		reg = <0x0 0x100b0000 0x800>;
+		clocks = <&cmu_misc CLK_GOUT_MISC_TMU_SUB_PCLK>;
+		interrupts = <GIC_SPI 804 IRQ_TYPE_LEVEL_HIGH 0>;
+		samsung,acpm-ipc = <&acpm_ipc>;
+		#thermal-sensor-cells = <1>;
+	};
+
 	cmu_peric0: clock-controller@10800000 {
 		compatible = "google,zumapro-cmu-peric0";
 		reg = <0x0 0x10800000 0x8000>;
@@ -541,6 +567,7 @@
 			 <&cmu_g3d CLK_GOUT_G3D_GPU_CLK_STACKS>;
 		clock-names = "core", "coregroup", "stacks";
 		power-domains = <&gpu_dvfs>;
+		#cooling-cells = <2>;
 		status = "disabled";
 	};
 
@@ -969,3 +996,4 @@
 };
 
 #include "zumapro-pinctrl.dtsi"
+#include "zumapro-tmu.dtsi"
