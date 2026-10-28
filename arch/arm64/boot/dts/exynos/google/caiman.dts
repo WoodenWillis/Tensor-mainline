@@ -75,6 +75,11 @@
 	status = "okay";
 };
 
+&hsi2c_6 {
+	clock-frequency = <400000>;
+	status = "okay";
+};
+
 &pinctrl_alive {
 	status = "okay";
 
@@ -166,5 +171,10 @@
 	assigned-clocks = <&cmu_hsi0 CLK_MOUT_HSI0_USI2>;
 	assigned-clock-parents = <&ext_24_5m>;
 	samsung,mode = <USI_MODE_SPI>;
+	status = "okay";
+};
+
+&usi6 {
+	samsung,mode = <USI_MODE_I2C>;
 	status = "okay";
 };
