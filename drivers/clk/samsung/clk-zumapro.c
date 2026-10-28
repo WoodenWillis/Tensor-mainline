@@ -346,20 +346,31 @@ CLK_OF_DECLARE(zumapro_cmu_misc, "google,zumapro-cmu-misc", zumapro_cmu_misc_ini
 /* Register Offset definitions for CMU_PERIC0 (0x10800000) */
 #define PLL_CON0_MUX_CLKCMU_PERIC0_NOC_USER			0x0600
 #define PLL_CON0_MUX_CLKCMU_PERIC0_USI0_UART_USER		0x0620
+#define PLL_CON0_MUX_CLKCMU_PERIC0_USI6_USI_USER		0x06a0
 #define CLK_CON_DIV_DIV_CLK_PERIC0_USI0_UART			0x1808
+#define CLK_CON_DIV_DIV_CLK_PERIC0_USI6_USI			0x1824
 #define CLK_CON_GAT_CLK_BLK_PERIC0_UID_USI0_UART_IPCLKPORT_IPCLK	0x2060
 #define CLK_CON_GAT_CLK_BLK_PERIC0_UID_USI0_UART_IPCLKPORT_PCLK	0x2064
+#define CLK_CON_GAT_CLK_BLK_PERIC0_UID_USI6_USI_IPCLKPORT_IPCLK	0x2098
+#define CLK_CON_GAT_CLK_BLK_PERIC0_UID_USI6_USI_IPCLKPORT_PCLK	0x209c
+#define CLK_CON_GAT_GOUT_BLK_PERIC0_UID_SYSREG_PERIC0_IPCLKPORT_PCLK	0x20f0
 
 static const unsigned long peric0_clk_regs[] __initconst = {
 	PLL_CON0_MUX_CLKCMU_PERIC0_NOC_USER,
 	PLL_CON0_MUX_CLKCMU_PERIC0_USI0_UART_USER,
+	PLL_CON0_MUX_CLKCMU_PERIC0_USI6_USI_USER,
 	CLK_CON_DIV_DIV_CLK_PERIC0_USI0_UART,
+	CLK_CON_DIV_DIV_CLK_PERIC0_USI6_USI,
 	CLK_CON_GAT_CLK_BLK_PERIC0_UID_USI0_UART_IPCLKPORT_IPCLK,
 	CLK_CON_GAT_CLK_BLK_PERIC0_UID_USI0_UART_IPCLKPORT_PCLK,
+	CLK_CON_GAT_CLK_BLK_PERIC0_UID_USI6_USI_IPCLKPORT_IPCLK,
+	CLK_CON_GAT_CLK_BLK_PERIC0_UID_USI6_USI_IPCLKPORT_PCLK,
+	CLK_CON_GAT_GOUT_BLK_PERIC0_UID_SYSREG_PERIC0_IPCLKPORT_PCLK,
 };
 
 PNAME(mout_peric0_noc_user_p) = { "oscclk", "dout_cmu_peric0_noc" };
 PNAME(mout_peric0_usi0_uart_user_p) = { "oscclk", "dout_cmu_peric0_ip" };
+PNAME(mout_peric0_usi6_usi_user_p) = { "oscclk", "dout_cmu_peric0_ip" };
 
 static const struct samsung_mux_clock peric0_mux_clks[] __initconst = {
 	MUX(CLK_MOUT_PERIC0_NOC_USER, "mout_peric0_noc_user",
@@ -367,11 +378,17 @@ static const struct samsung_mux_clock peric0_mux_clks[] __initconst = {
 	MUX(CLK_MOUT_PERIC0_USI0_UART_USER, "mout_peric0_usi0_uart_user",
 	    mout_peric0_usi0_uart_user_p,
 	    PLL_CON0_MUX_CLKCMU_PERIC0_USI0_UART_USER, 4, 1),
+	MUX(CLK_MOUT_PERIC0_USI6_USI_USER, "mout_peric0_usi6_usi_user",
+	    mout_peric0_usi6_usi_user_p,
+	    PLL_CON0_MUX_CLKCMU_PERIC0_USI6_USI_USER, 4, 1),
 };
 
 static const struct samsung_div_clock peric0_div_clks[] __initconst = {
 	DIV(CLK_DOUT_PERIC0_USI0_UART, "dout_peric0_usi0_uart",
 	    "mout_peric0_usi0_uart_user", CLK_CON_DIV_DIV_CLK_PERIC0_USI0_UART,
+	    0, 4),
+	DIV(CLK_DOUT_PERIC0_USI6_USI, "dout_peric0_usi6_usi",
+	    "mout_peric0_usi6_usi_user", CLK_CON_DIV_DIV_CLK_PERIC0_USI6_USI,
 	    0, 4),
 };
 
@@ -384,6 +401,16 @@ static const struct samsung_gate_clock peric0_gate_clks[] __initconst = {
 	     "mout_peric0_noc_user",
 	     CLK_CON_GAT_CLK_BLK_PERIC0_UID_USI0_UART_IPCLKPORT_PCLK,
 	     21, CLK_IS_CRITICAL, 0),
+	GATE(CLK_GOUT_PERIC0_USI6_USI_IPCLK, "gout_peric0_usi6_usi_ipclk",
+	     "dout_peric0_usi6_usi",
+	     CLK_CON_GAT_CLK_BLK_PERIC0_UID_USI6_USI_IPCLKPORT_IPCLK, 21, 0, 0),
+	GATE(CLK_GOUT_PERIC0_USI6_USI_PCLK, "gout_peric0_usi6_usi_pclk",
+	     "mout_peric0_noc_user",
+	     CLK_CON_GAT_CLK_BLK_PERIC0_UID_USI6_USI_IPCLKPORT_PCLK, 21, 0, 0),
+	GATE(CLK_GOUT_PERIC0_SYSREG_PERIC0_PCLK, "gout_peric0_sysreg_peric0_pclk",
+	     "mout_peric0_noc_user",
+	     CLK_CON_GAT_GOUT_BLK_PERIC0_UID_SYSREG_PERIC0_IPCLKPORT_PCLK,
+	     21, 0, 0),
 };
 
 static const struct samsung_cmu_info peric0_cmu_info __initconst = {
