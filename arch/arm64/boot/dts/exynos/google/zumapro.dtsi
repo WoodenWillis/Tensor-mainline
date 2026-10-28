@@ -494,6 +494,12 @@
 		clock-names = "oscclk", "noc", "ip";
 	};
 
+	sysreg_peric0: syscon@10821000 {
+		compatible = "google,zumapro-peric0-sysreg", "syscon";
+		reg = <0x0 0x10821000 0x1000>;
+		clocks = <&cmu_peric0 CLK_GOUT_PERIC0_SYSREG_PERIC0_PCLK>;
+	};
+
 	cmu_hsi0: clock-controller@11000000 {
 		compatible = "google,zumapro-cmu-hsi0";
 		reg = <0x0 0x11000000 0x8000>;
@@ -828,6 +834,34 @@
 		clocks = <&cmu_peric0 CLK_GOUT_PERIC0_USI0_UART_PCLK>,
 			 <&cmu_peric0 CLK_GOUT_PERIC0_USI0_UART_IPCLK>;
 		clock-names = "uart", "clk_uart_baud0";
+	};
+
+	usi6: usi@108d00c0 {
+		compatible = "google,gs101-usi", "samsung,exynos850-usi";
+		reg = <0x0 0x108d00c0 0x20>;
+		ranges = <0x0 0x0 0x108d0000 0x1000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		clocks = <&cmu_peric0 CLK_GOUT_PERIC0_USI6_USI_PCLK>,
+			 <&cmu_peric0 CLK_GOUT_PERIC0_USI6_USI_IPCLK>;
+		clock-names = "pclk", "ipclk";
+		samsung,sysreg = <&sysreg_peric0 0x14>;
+		status = "disabled";
+
+		hsi2c_6: i2c@0 {
+			compatible = "google,zumapro-hsi2c",
+				     "samsung,exynosautov9-hsi2c";
+			reg = <0x0 0xc0>;
+			interrupts = <GIC_SPI 647 IRQ_TYPE_LEVEL_HIGH 0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			pinctrl-0 = <&hsi2c6_bus>;
+			pinctrl-names = "default";
+			clocks = <&cmu_peric0 CLK_GOUT_PERIC0_USI6_USI_IPCLK>,
+				 <&cmu_peric0 CLK_GOUT_PERIC0_USI6_USI_PCLK>;
+			clock-names = "hsi2c", "hsi2c_pclk";
+			status = "disabled";
+		};
 	};
 
 	usi2_hsi0: usi@111d00c0 {
