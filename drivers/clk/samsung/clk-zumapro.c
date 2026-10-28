@@ -280,6 +280,8 @@ CLK_OF_DECLARE(zumapro_cmu_top, "google,zumapro-cmu-top", zumapro_cmu_top_init);
 #define PLL_CON0_MUX_CLKCMU_MISC_NOC_USER	0x0600
 #define CLK_CON_DIV_DIV_CLK_MISC_NOCP		0x1808
 #define CLK_CON_GAT_GOUT_BLK_MISC_UID_MCT_IPCLKPORT_PCLK		0x20c8
+#define CLK_CON_GAT_GOUT_BLK_MISC_UID_TMU_SUB_IPCLKPORT_PCLK		0x215c
+#define CLK_CON_GAT_GOUT_BLK_MISC_UID_TMU_TOP_IPCLKPORT_PCLK		0x2160
 #define CLK_CON_GAT_GOUT_BLK_MISC_UID_WDT_CLUSTER0_IPCLKPORT_PCLK	0x2164
 #define CLK_CON_GAT_GOUT_BLK_MISC_UID_WDT_CLUSTER1_IPCLKPORT_PCLK	0x2168
 
@@ -287,6 +289,8 @@ static const unsigned long misc_clk_regs[] __initconst = {
 	PLL_CON0_MUX_CLKCMU_MISC_NOC_USER,
 	CLK_CON_DIV_DIV_CLK_MISC_NOCP,
 	CLK_CON_GAT_GOUT_BLK_MISC_UID_MCT_IPCLKPORT_PCLK,
+	CLK_CON_GAT_GOUT_BLK_MISC_UID_TMU_SUB_IPCLKPORT_PCLK,
+	CLK_CON_GAT_GOUT_BLK_MISC_UID_TMU_TOP_IPCLKPORT_PCLK,
 	CLK_CON_GAT_GOUT_BLK_MISC_UID_WDT_CLUSTER0_IPCLKPORT_PCLK,
 	CLK_CON_GAT_GOUT_BLK_MISC_UID_WDT_CLUSTER1_IPCLKPORT_PCLK,
 };
@@ -306,6 +310,10 @@ static const struct samsung_div_clock misc_div_clks[] __initconst = {
 static const struct samsung_gate_clock misc_gate_clks[] __initconst = {
 	GATE(CLK_GOUT_MISC_MCT_PCLK, "gout_misc_mct_pclk", "dout_misc_nocp",
 	     CLK_CON_GAT_GOUT_BLK_MISC_UID_MCT_IPCLKPORT_PCLK, 21, 0, 0),
+	GATE(CLK_GOUT_MISC_TMU_SUB_PCLK, "gout_misc_tmu_sub_pclk", "dout_misc_nocp",
+	     CLK_CON_GAT_GOUT_BLK_MISC_UID_TMU_SUB_IPCLKPORT_PCLK, 21, 0, 0),
+	GATE(CLK_GOUT_MISC_TMU_TOP_PCLK, "gout_misc_tmu_top_pclk", "dout_misc_nocp",
+	     CLK_CON_GAT_GOUT_BLK_MISC_UID_TMU_TOP_IPCLKPORT_PCLK, 21, 0, 0),
 	GATE(CLK_GOUT_MISC_WDT_CL0_PCLK, "gout_misc_wdt_cl0_pclk", "dout_misc_nocp",
 	     CLK_CON_GAT_GOUT_BLK_MISC_UID_WDT_CLUSTER0_IPCLKPORT_PCLK, 21, 0, 0),
 	GATE(CLK_GOUT_MISC_WDT_CL1_PCLK, "gout_misc_wdt_cl1_pclk", "dout_misc_nocp",
