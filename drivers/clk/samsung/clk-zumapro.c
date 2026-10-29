@@ -379,11 +379,11 @@ static const struct samsung_gate_clock peric0_gate_clks[] __initconst = {
 	GATE(CLK_GOUT_PERIC0_USI0_UART_IPCLK, "gout_peric0_usi0_uart_ipclk",
 	     "dout_peric0_usi0_uart",
 	     CLK_CON_GAT_CLK_BLK_PERIC0_UID_USI0_UART_IPCLKPORT_IPCLK,
-	     21, CLK_IGNORE_UNUSED, 0),
+	     21, CLK_IS_CRITICAL, 0),
 	GATE(CLK_GOUT_PERIC0_USI0_UART_PCLK, "gout_peric0_usi0_uart_pclk",
 	     "mout_peric0_noc_user",
 	     CLK_CON_GAT_CLK_BLK_PERIC0_UID_USI0_UART_IPCLKPORT_PCLK,
-	     21, CLK_IGNORE_UNUSED, 0),
+	     21, CLK_IS_CRITICAL, 0),
 };
 
 static const struct samsung_cmu_info peric0_cmu_info __initconst = {
