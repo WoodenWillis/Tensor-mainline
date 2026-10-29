@@ -78,6 +78,12 @@
 &hsi2c_6 {
 	clock-frequency = <400000>;
 	status = "okay";
+
+	fuel-gauge@36 {
+		compatible = "maxim,max77779-fg";
+		reg = <0x36>;
+		shunt-resistor-micro-ohms = <2000>;
+	};
 };
 
 &pinctrl_alive {
