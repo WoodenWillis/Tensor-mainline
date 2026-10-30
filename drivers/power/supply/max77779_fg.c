@@ -84,7 +84,7 @@ static int max77779_fg_current(struct max77779_fg *fg, u8 reg, int *ua)
 	if (ret)
 		return ret;
 
-	*ua = -div_s64((s64)(s16)val * 1562500, fg->rsense_uohm);
+	*ua = div_s64((s64)(s16)val * 1562500, fg->rsense_uohm);
 	return 0;
 }
 
