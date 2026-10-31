@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/mfd/samsung,s2mpg14-pmic.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Samsung S2MPG14 / S2MPG15 Power Management IC
+
+maintainers:
+  - Will <239688658+WoodenWillis@users.noreply.github.com>
+
+description: |
+  The Samsung S2MPG14 (main) and S2MPG15 (sub) are the PMIC pair used with
+  the Google Tensor G4 (zumapro) SoC. They are accessed through the ACPM
+  firmware and are described as children of the ACPM IPC node.
+
+properties:
+  compatible:
+    enum:
+      - samsung,s2mpg14-pmic
+      - samsung,s2mpg15-pmic
+
+required:
+  - compatible
+
+additionalProperties: false
+
+examples:
+  - |
+    pmic-1 {
+        compatible = "samsung,s2mpg14-pmic";
+    };
+
+...
