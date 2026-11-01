@@ -355,13 +355,22 @@
 	};
 
 	cpucl2_opp_table: opp-table-2 {
-		/* TODO(will): ACPM cpucl2 levels 11/13/15/17 lost to UART, re-dump and add */
 		compatible = "operating-points-v2";
 		opp-shared;
+
+		opp-700000000 {
+			opp-hz = /bits/ 64 <700000000>;
+			opp-microvolt = <556250>;
+		};
 
 		opp-1164000000 {
 			opp-hz = /bits/ 64 <1164000000>;
 			opp-microvolt = <600000>;
+		};
+
+		opp-1396000000 {
+			opp-hz = /bits/ 64 <1396000000>;
+			opp-microvolt = <631250>;
 		};
 
 		opp-1557000000 {
@@ -369,9 +378,19 @@
 			opp-microvolt = <662500>;
 		};
 
+		opp-1745000000 {
+			opp-hz = /bits/ 64 <1745000000>;
+			opp-microvolt = <693750>;
+		};
+
 		opp-1885000000 {
 			opp-hz = /bits/ 64 <1885000000>;
 			opp-microvolt = <718750>;
+		};
+
+		opp-1999000000 {
+			opp-hz = /bits/ 64 <1999000000>;
+			opp-microvolt = <737500>;
 		};
 
 		opp-2147000000 {
