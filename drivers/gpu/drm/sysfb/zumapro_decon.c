@@ -41,6 +41,7 @@
 #define DECON_TRIG_CON_SW_TRIG_DET_EN	BIT(1)
 #define DECON_TRIG_CON_HW_TRIG_MASK	BIT(4)
 #define DECON_TRIG_CON_SW_TRIG_EN	BIT(8)
+#define DECON_TRIG_CON_HW_TRIG_SEL	GENMASK(25, 24)
 #define DECON_SHD_REG_UP_REQ		0x0050
 #define DECON_SHD_REG_UP_REQ_GLOBAL	BIT(31)
 
@@ -76,13 +77,14 @@ static bool decon_is_running(struct zumapro_decon *zd)
 	return readl(zd->decon + DECON_GLOBAL_CON) & DECON_GLOBAL_CON_RUN_STATUS;
 }
 
-/* TODO(will): pace triggers on the DECON frame-done interrupt. */
-static void decon_sw_trigger(struct zumapro_decon *zd)
+/* TODO(will): re-mask the trigger at frame start so idle TEs don't refresh from memory. */
+static void decon_te_trigger(struct zumapro_decon *zd)
 {
 	u32 trig = readl(zd->decon + DECON_TRIG_CON);
 
-	trig &= ~(DECON_TRIG_CON_HW_TRIG_EN | DECON_TRIG_CON_HW_TRIG_MASK);
-	trig |= DECON_TRIG_CON_SW_TRIG_EN | DECON_TRIG_CON_SW_TRIG_DET_EN;
+	trig &= ~(DECON_TRIG_CON_SW_TRIG_EN | DECON_TRIG_CON_SW_TRIG_DET_EN |
+		  DECON_TRIG_CON_HW_TRIG_MASK | DECON_TRIG_CON_HW_TRIG_SEL);
+	trig |= DECON_TRIG_CON_HW_TRIG_EN;
 	writel(trig, zd->decon + DECON_TRIG_CON);
 	writel(DECON_SHD_REG_UP_REQ_GLOBAL, zd->decon + DECON_SHD_REG_UP_REQ);
 }
@@ -91,14 +93,14 @@ static void zumapro_decon_plane_atomic_update(struct drm_plane *plane,
 					      struct drm_atomic_commit *state)
 {
 	drm_sysfb_plane_helper_atomic_update(plane, state);
-	decon_sw_trigger(to_zumapro_decon(plane->dev));
+	decon_te_trigger(to_zumapro_decon(plane->dev));
 }
 
 static void zumapro_decon_plane_atomic_disable(struct drm_plane *plane,
 					       struct drm_atomic_commit *state)
 {
 	drm_sysfb_plane_helper_atomic_disable(plane, state);
-	decon_sw_trigger(to_zumapro_decon(plane->dev));
+	decon_te_trigger(to_zumapro_decon(plane->dev));
 }
 
 static const u64 zumapro_decon_plane_format_modifiers[] = {
