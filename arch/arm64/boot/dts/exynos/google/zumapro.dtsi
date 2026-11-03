@@ -623,6 +623,38 @@
 		status = "disabled";
 	};
 
+	pcie_1: pcie@13120000 {
+		compatible = "google,zumapro-pcie";
+		reg = <0x0 0x13400000 0x381000>,
+		      <0x0 0x13120000 0x2000>,
+		      <0x0 0x13130000 0x5000>,
+		      <0x0 0x13150000 0xd000>,
+		      <0x0 0x13160000 0x3000>,
+		      <0x0 0x13140000 0x5000>,
+		      <0x0 0x60ffe000 0x2000>;
+		reg-names = "dbi", "elbi", "soc", "udbg", "phy", "pcs", "config";
+		#address-cells = <3>;
+		#size-cells = <2>;
+		device_type = "pci";
+		num-lanes = <1>;
+		bus-range = <0x00 0xff>;
+		ranges = <0x82000000 0x0 0x60000000 0x0 0x60000000 0x0 0xff0000>;
+		interrupts = <GIC_SPI 439 IRQ_TYPE_LEVEL_HIGH 0>;
+		interrupt-names = "msi";
+		clocks = <&cmu_hsi2 CLK_GOUT_HSI2_PCIE_PHY_REFCLK>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_PCIE_DBI_ACLK>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_PCIE_MSTR_ACLK>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_PCIE_SLV_ACLK>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_PCIE_SUB_CTRL_APB>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_PCIE_PHY_UDBG_APB>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_PCIE_PIPE_PAL_APB>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_PCIE_IA>;
+		samsung,pmu-syscon = <&pmu_system_controller>;
+		samsung,pmu-offset = <0x3ec8>;
+		samsung,perst-delay-us = <15000>;
+		status = "disabled";
+	};
+
 	firmware {
 		acpm_ipc: power-management {
 			compatible = "google,zumapro-acpm-ipc";
