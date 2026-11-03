@@ -148,9 +148,20 @@
 };
 
 &pcie_1 {
+	pinctrl-0 = <&pcie1_clkreq>;
+	pinctrl-names = "default";
 	reset-gpios = <&gph3 0 GPIO_ACTIVE_HIGH>;
 	wlan-reg-on-gpios = <&gph3 4 GPIO_ACTIVE_HIGH>;
 	status = "okay";
+};
+
+&pinctrl_hsi2 {
+	pcie1_clkreq: pcie1-clkreq-pins {
+		samsung,pins = "gph3-1";
+		samsung,pin-function = <GS101_PIN_FUNC_2>;
+		samsung,pin-pud = <GS101_PIN_PULL_UP>;
+		samsung,pin-drv = <GS101_PIN_DRV_10_MA>;
+	};
 };
 
 &ufs_0 {
