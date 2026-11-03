@@ -1017,6 +1017,7 @@
 
 /* zumapro */
 #define ZUMAPRO_PHY_CTRL_UFS					0x3ec0
+#define ZUMAPRO_PHY_CTRL_PCIE					0x3ec8
 
 /* exynosautov920 */
 #define EXYNOSAUTOV920_PHY_CTRL_USB20				(0x0710)

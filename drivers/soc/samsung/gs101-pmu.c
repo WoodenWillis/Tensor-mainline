@@ -328,6 +328,7 @@ static const struct regmap_range zumapro_pmu_registers[] = {
 	regmap_reg_range(GS101_CPU_INFORM(0), GS101_CPU_INFORM(7)),
 	regmap_reg_range(GS101_PHY_CTRL_USB20, GS101_PHY_CTRL_USB20),
 	regmap_reg_range(ZUMAPRO_PHY_CTRL_UFS, ZUMAPRO_PHY_CTRL_UFS),
+	regmap_reg_range(ZUMAPRO_PHY_CTRL_PCIE, ZUMAPRO_PHY_CTRL_PCIE),
 };
 
 static const struct regmap_access_table zumapro_pmu_access_table = {
