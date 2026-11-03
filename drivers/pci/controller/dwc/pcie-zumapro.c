@@ -58,7 +58,6 @@
 
 struct zumapro_pcie {
 	struct dw_pcie		pci;
-	void __iomem		*elbi;
 	void __iomem		*soc;
 	void __iomem		*udbg;
 	void __iomem		*phy;
@@ -84,7 +83,7 @@ static bool zumapro_pcie_poll_bit(void __iomem *base, u32 reg, int bit)
 
 static void zumapro_pcie_phy_config(struct zumapro_pcie *zp)
 {
-	void __iomem *elbi = zp->elbi;
+	void __iomem *elbi = zp->pci.elbi_base;
 	void __iomem *soc = zp->soc;
 	void __iomem *udbg = zp->udbg;
 	void __iomem *phy = zp->phy;
@@ -261,7 +260,7 @@ static int zumapro_pcie_start_link(struct dw_pcie *pci)
 {
 	struct zumapro_pcie *zp = to_zumapro_pcie(pci);
 
-	writel(LTSSM_ENABLE, zp->elbi + PCIE_APP_LTSSM_ENABLE);
+	writel(LTSSM_ENABLE, zp->pci.elbi_base + PCIE_APP_LTSSM_ENABLE);
 
 	return 0;
 }
@@ -270,7 +269,7 @@ static void zumapro_pcie_stop_link(struct dw_pcie *pci)
 {
 	struct zumapro_pcie *zp = to_zumapro_pcie(pci);
 
-	writel(0x0, zp->elbi + PCIE_APP_LTSSM_ENABLE);
+	writel(0x0, zp->pci.elbi_base + PCIE_APP_LTSSM_ENABLE);
 }
 
 static bool zumapro_pcie_link_up(struct dw_pcie *pci)
@@ -278,7 +277,7 @@ static bool zumapro_pcie_link_up(struct dw_pcie *pci)
 	struct zumapro_pcie *zp = to_zumapro_pcie(pci);
 	u32 val;
 
-	val = readl(zp->elbi + PCIE_ELBI_RDLH_LINKUP) & LTSSM_STATE_MASK;
+	val = readl(zp->pci.elbi_base + PCIE_ELBI_RDLH_LINKUP) & LTSSM_STATE_MASK;
 
 	return val >= S_RCVRY_LOCK && val <= S_L1_IDLE;
 }
@@ -313,9 +312,6 @@ static int zumapro_pcie_probe(struct platform_device *pdev)
 	zp->pci.ops = &zumapro_dw_pcie_ops;
 	zp->pci.pp.ops = &zumapro_pcie_host_ops;
 
-	zp->elbi = zumapro_pcie_map(pdev, "elbi");
-	if (IS_ERR(zp->elbi))
-		return PTR_ERR(zp->elbi);
 	zp->soc = zumapro_pcie_map(pdev, "soc");
 	if (IS_ERR(zp->soc))
 		return PTR_ERR(zp->soc);
