@@ -63,6 +63,8 @@
 #define PCIE_PHY_CONTROL_MASK		0x1
 #define PCIE_PHY_BYPASS			0x1
 
+#define PCIE_PCS_PM_POWER_STATE		0x188
+
 #define LINK_WAIT_US			10
 #define LINK_WAIT_CNT			10000
 
@@ -91,6 +93,28 @@ static bool zumapro_pcie_poll_bit(void __iomem *base, u32 reg, int bit)
 
 	return !readl_poll_timeout(base + reg, val, val & BIT(bit),
 				   LINK_WAIT_US, LINK_WAIT_US * LINK_WAIT_CNT);
+}
+
+static void zumapro_pcie_phy_pwrdn_clear(struct zumapro_pcie *zp)
+{
+	void __iomem *phy = zp->phy;
+	void __iomem *udbg = zp->udbg;
+	u32 val;
+
+	val = readl(udbg + PCIE_UDBG_EXTPLL) | EXTPLL_INIT;
+	writel(val, udbg + PCIE_UDBG_EXTPLL);
+	udelay(100);
+
+	writel(0x00, phy + 0x000c);
+	writel(0x55, phy + 0x0928);
+	writel(0x02, phy + 0x0580);
+	writel(0x00, phy + 0x0208);
+	writel(0x00, phy + 0x1044);
+	writel(0x00, phy + 0x1048);
+	writel(0x00, phy + 0x104c);
+	writel(0x00, phy + 0x1050);
+	writel(0x00, phy + 0x185c);
+	udelay(10);
 }
 
 static void zumapro_pcie_phy_config(struct zumapro_pcie *zp)
@@ -261,6 +285,7 @@ static int zumapro_pcie_host_init(struct dw_pcie_rp *pp)
 	gpiod_set_value_cansleep(zp->wlan, 1);
 	usleep_range(WLAN_POWER_ON_US, WLAN_POWER_ON_US + 1000);
 
+	zumapro_pcie_phy_pwrdn_clear(zp);
 	zumapro_pcie_phy_config(zp);
 
 	gpiod_set_value_cansleep(zp->perst, 1);
@@ -275,6 +300,7 @@ static const struct dw_pcie_host_ops zumapro_pcie_host_ops = {
 
 static int zumapro_pcie_start_link(struct dw_pcie *pci)
 {
+	struct zumapro_pcie *zp = to_zumapro_pcie(pci);
 	void __iomem *elbi = pci->elbi_base;
 	u32 val;
 	int i;
@@ -293,11 +319,16 @@ static int zumapro_pcie_start_link(struct dw_pcie *pci)
 
 	writel(LTSSM_ENABLE, elbi + PCIE_APP_LTSSM_ENABLE);
 
-	for (i = 0; i < 10; i++) {
-		usleep_range(5000, 6000);
+	for (i = 0; i < 30; i++) {
+		usleep_range(1000, 1100);
 		val = readl(elbi + PCIE_ELBI_RDLH_LINKUP) & LTSSM_STATE_MASK;
 		dev_info(pci->dev, "ltssm[%d] = 0x%02x\n", i, val);
 	}
+
+	dev_info(pci->dev, "post: ltssm=0x%02x dbg1=0x%08x pcs_pm=0x%08x\n",
+		 readl(elbi + PCIE_ELBI_RDLH_LINKUP) & LTSSM_STATE_MASK,
+		 dw_pcie_readl_dbi(pci, PCIE_PORT_DEBUG1),
+		 readl(zp->pcs + PCIE_PCS_PM_POWER_STATE));
 
 	return 0;
 }
