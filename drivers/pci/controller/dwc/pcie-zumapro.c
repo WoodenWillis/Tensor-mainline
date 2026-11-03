@@ -277,6 +277,7 @@ static int zumapro_pcie_start_link(struct dw_pcie *pci)
 {
 	void __iomem *elbi = pci->elbi_base;
 	u32 val;
+	int i;
 
 	val = readl(elbi + PCIE_APP_REQ_EXIT_L1_MODE);
 	val |= APP_REQ_EXIT_L1_MODE | L1_REQ_NAK_CONTROL_MASTER;
@@ -291,6 +292,12 @@ static int zumapro_pcie_start_link(struct dw_pcie *pci)
 	writel(NACK_ENABLE, elbi + PCIE_MSTR_PEND_SEL_NAK);
 
 	writel(LTSSM_ENABLE, elbi + PCIE_APP_LTSSM_ENABLE);
+
+	for (i = 0; i < 10; i++) {
+		usleep_range(5000, 6000);
+		val = readl(elbi + PCIE_ELBI_RDLH_LINKUP) & LTSSM_STATE_MASK;
+		dev_info(pci->dev, "ltssm[%d] = 0x%02x\n", i, val);
+	}
 
 	return 0;
 }
