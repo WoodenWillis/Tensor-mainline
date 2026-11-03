@@ -68,7 +68,7 @@
 #define LINK_WAIT_US			10
 #define LINK_WAIT_CNT			10000
 
-#define WLAN_POWER_ON_US		10000
+#define WLAN_POWER_ON_MS		200
 
 struct zumapro_pcie {
 	struct dw_pcie		pci;
@@ -261,7 +261,7 @@ static int zumapro_pcie_host_init(struct dw_pcie_rp *pp)
 			   PCIE_PHY_BYPASS);
 
 	gpiod_set_value_cansleep(zp->wlan, 1);
-	usleep_range(WLAN_POWER_ON_US, WLAN_POWER_ON_US + 1000);
+	msleep(WLAN_POWER_ON_MS);
 
 	zumapro_pcie_phy_config(zp);
 
