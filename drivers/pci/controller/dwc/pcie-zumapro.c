@@ -62,10 +62,6 @@
 
 #define PCIE_PHY_CONTROL_MASK		0x1
 #define PCIE_PHY_BYPASS			0x1
-#define PCIE_PHY_CONTROL_LANE_EN	BIT(10)
-
-#define PCIE_UDBG_LANE_CFG		0xc800
-#define   UDBG_LANE_CFG_CH1		0x421
 
 #define PCIE_PCS_PM_POWER_STATE		0x188
 
@@ -268,10 +264,6 @@ static int zumapro_pcie_host_init(struct dw_pcie_rp *pp)
 	usleep_range(WLAN_POWER_ON_US, WLAN_POWER_ON_US + 1000);
 
 	zumapro_pcie_phy_config(zp);
-
-	regmap_update_bits(zp->pmu, zp->pmu_offset, PCIE_PHY_CONTROL_LANE_EN,
-			   PCIE_PHY_CONTROL_LANE_EN);
-	writel(UDBG_LANE_CFG_CH1, zp->udbg + PCIE_UDBG_LANE_CFG);
 
 	gpiod_set_value_cansleep(zp->perst, 1);
 	usleep_range(zp->perst_delay_us, zp->perst_delay_us + 2000);
