@@ -24,6 +24,16 @@
 #define PCIE_L1_EXIT_OFF		0x1078
 #define PCIE_SOFT_PWR_RST		0x03a4
 #define PCIE_SLV_PEND_SEL_NAK		0x03d8
+#define PCIE_APP_XFER_PENDING		0x0074
+#define PCIE_LINKDOWN_RST_CTRL_SEL	0x03a0
+#define   LINKDOWN_RST_MANUAL		BIT(1)
+#define PCIE_QCH_SEL			0x03a8
+#define   CLOCK_GATING_MASK		GENMASK(11, 0)
+#define PCIE_APP_REQ_EXIT_L1_MODE	0x03bc
+#define   APP_REQ_EXIT_L1_MODE		BIT(0)
+#define   L1_REQ_NAK_CONTROL_MASTER	BIT(4)
+#define PCIE_MSTR_PEND_SEL_NAK		0x0474
+#define   NACK_ENABLE			0x1
 #define PCIE_PMA_RST_CTRL0		0x1400
 #define PCIE_PMA_RST_CTRL1		0x1404
 #define PCIE_PMA_RST_CTRL2		0x1408
@@ -265,9 +275,22 @@ static const struct dw_pcie_host_ops zumapro_pcie_host_ops = {
 
 static int zumapro_pcie_start_link(struct dw_pcie *pci)
 {
-	struct zumapro_pcie *zp = to_zumapro_pcie(pci);
+	void __iomem *elbi = pci->elbi_base;
+	u32 val;
 
-	writel(LTSSM_ENABLE, zp->pci.elbi_base + PCIE_APP_LTSSM_ENABLE);
+	val = readl(elbi + PCIE_APP_REQ_EXIT_L1_MODE);
+	val |= APP_REQ_EXIT_L1_MODE | L1_REQ_NAK_CONTROL_MASTER;
+	writel(val, elbi + PCIE_APP_REQ_EXIT_L1_MODE);
+
+	writel(LINKDOWN_RST_MANUAL, elbi + PCIE_LINKDOWN_RST_CTRL_SEL);
+	writel(0x1, elbi + PCIE_APP_XFER_PENDING);
+
+	val = readl(elbi + PCIE_QCH_SEL) & ~CLOCK_GATING_MASK;
+	writel(val, elbi + PCIE_QCH_SEL);
+
+	writel(NACK_ENABLE, elbi + PCIE_MSTR_PEND_SEL_NAK);
+
+	writel(LTSSM_ENABLE, elbi + PCIE_APP_LTSSM_ENABLE);
 
 	return 0;
 }
