@@ -88,6 +88,8 @@ static void zumapro_pcie_phy_config(struct zumapro_pcie *zp)
 	void __iomem *udbg = zp->udbg;
 	void __iomem *phy = zp->phy;
 	void __iomem *pcs = zp->pcs;
+	struct device *dev = zp->pci.dev;
+	bool extpll, pll, cdr, oc;
 	u32 val;
 
 	writel(0x3, phy + PCIE_PHY_CLK_GATE);
@@ -96,7 +98,7 @@ static void zumapro_pcie_phy_config(struct zumapro_pcie *zp)
 	writel(val, udbg + PCIE_UDBG_EXTPLL);
 	val = readl(udbg + PCIE_UDBG_EXTPLL) & ~EXTPLL_RESETB;
 	writel(val, udbg + PCIE_UDBG_EXTPLL);
-	zumapro_pcie_poll_bit(udbg, PCIE_UDBG_EXTPLL_LOCK, EXTPLL_LOCK_BIT);
+	extpll = zumapro_pcie_poll_bit(udbg, PCIE_UDBG_EXTPLL_LOCK, EXTPLL_LOCK_BIT);
 
 	val = readl(soc + PCIE_SOC_CTRL) & ~SOC_CTRL_PHY_CLK_TCXO;
 	writel(val, soc + PCIE_SOC_CTRL);
@@ -220,9 +222,12 @@ static void zumapro_pcie_phy_config(struct zumapro_pcie *zp)
 	writel(0x1, elbi + PCIE_PMA_RST_CTRL2);
 	writel(0x1, elbi + PCIE_PMA_RST_CTRL0);
 
-	zumapro_pcie_poll_bit(phy, PCIE_PHY_PLL_LOCK, 0);
-	zumapro_pcie_poll_bit(phy, PCIE_PHY_CDR_LOCK, CDR_LOCK_BIT);
-	zumapro_pcie_poll_bit(phy, PCIE_PHY_OC_DONE, OC_DONE_BIT);
+	pll = zumapro_pcie_poll_bit(phy, PCIE_PHY_PLL_LOCK, 0);
+	cdr = zumapro_pcie_poll_bit(phy, PCIE_PHY_CDR_LOCK, CDR_LOCK_BIT);
+	oc = zumapro_pcie_poll_bit(phy, PCIE_PHY_OC_DONE, OC_DONE_BIT);
+
+	dev_info(dev, "phy locks: extpll=%d pll=%d cdr=%d oc=%d\n",
+		 extpll, pll, cdr, oc);
 
 	writel(0x0, phy + PCIE_PHY_CLK_GATE);
 	writel(0x1, elbi + PCIE_L1_EXIT_OFF);
