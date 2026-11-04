@@ -41,13 +41,26 @@ properties:
               - google,gs101-raven
           - const: google,gs101
 
+      - description: Google Pixel 9 Pro (Caiman)
+        items:
+          - enum:
+              - google,zumapro-caiman
+          - const: google,zumapro
+
   # Bootloader requires empty ect node to be present
   ect:
     type: object
     additionalProperties: false
 
-required:
-  - ect
+allOf:
+  - if:
+      properties:
+        compatible:
+          contains:
+            const: google,gs101
+    then:
+      required:
+        - ect
 
 additionalProperties: true
 

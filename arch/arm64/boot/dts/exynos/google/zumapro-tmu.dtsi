@@ -8,16 +8,17 @@
 			polling-delay-passive = <25>;
 			polling-delay = <1000>;
 			thermal-sensors = <&tmu_top 0>;
+			sustainable-power = <2000>;
 
 			trips {
-				big_control: big-control {
-					temperature = <95000>;
+				big_switch_on: big-switch-on {
+					temperature = <70000>;
 					hysteresis = <5000>;
 					type = "passive";
 				};
 
-				big_dfs: big-dfs {
-					temperature = <105000>;
+				big_control: big-control {
+					temperature = <95000>;
 					hysteresis = <5000>;
 					type = "passive";
 				};
@@ -34,18 +35,6 @@
 					trip = <&big_control>;
 					cooling-device = <&cpu7 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 				};
-
-				map1 {
-					trip = <&big_dfs>;
-					cooling-device = <&cpu0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu1 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu4 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu5 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu6 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu7 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
-				};
 			};
 		};
 
@@ -53,16 +42,17 @@
 			polling-delay-passive = <25>;
 			polling-delay = <1000>;
 			thermal-sensors = <&tmu_top 1>;
+			sustainable-power = <1000>;
 
 			trips {
-				mid_control: mid-control {
-					temperature = <95000>;
+				mid_switch_on: mid-switch-on {
+					temperature = <75000>;
 					hysteresis = <5000>;
 					type = "passive";
 				};
 
-				mid_dfs: mid-dfs {
-					temperature = <105000>;
+				mid_control: mid-control {
+					temperature = <95000>;
 					hysteresis = <5000>;
 					type = "passive";
 				};
@@ -78,20 +68,8 @@
 				map0 {
 					trip = <&mid_control>;
 					cooling-device = <&cpu4 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu5 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu6 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
-				};
-
-				map1 {
-					trip = <&mid_dfs>;
-					cooling-device = <&cpu0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu1 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu4 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu5 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu6 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu7 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+							<&cpu5 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							<&cpu6 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 				};
 			};
 		};
@@ -100,16 +78,17 @@
 			polling-delay-passive = <50>;
 			polling-delay = <1000>;
 			thermal-sensors = <&tmu_top 2>;
+			sustainable-power = <200>;
 
 			trips {
-				little_control: little-control {
-					temperature = <100000>;
+				little_switch_on: little-switch-on {
+					temperature = <80000>;
 					hysteresis = <5000>;
 					type = "passive";
 				};
 
-				little_dfs: little-dfs {
-					temperature = <108000>;
+				little_control: little-control {
+					temperature = <100000>;
 					hysteresis = <5000>;
 					type = "passive";
 				};
@@ -125,21 +104,9 @@
 				map0 {
 					trip = <&little_control>;
 					cooling-device = <&cpu0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu1 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
-				};
-
-				map1 {
-					trip = <&little_dfs>;
-					cooling-device = <&cpu0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu1 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu4 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu5 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu6 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu7 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+							<&cpu1 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							<&cpu2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+							<&cpu3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 				};
 			};
 		};

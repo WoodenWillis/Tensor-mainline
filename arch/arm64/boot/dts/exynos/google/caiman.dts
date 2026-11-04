@@ -16,7 +16,7 @@
 
 / {
 	model = "Google Pixel 9 Pro (caiman)";
-	compatible = "google,caiman", "google,zumapro";
+	compatible = "google,zumapro-caiman", "google,zumapro";
 
 	reserved-memory {
 		abl_framebuffer: framebuffer@fac00000 {
