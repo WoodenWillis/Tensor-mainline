@@ -21,6 +21,7 @@
 #define   DEVICE_TYPE_RC		0x4
 #define PCIE_APP_LTSSM_ENABLE		0x0054
 #define   LTSSM_ENABLE			0x1
+#define   LTSSM_DISABLE			0x0
 #define PCIE_L1_EXIT_OFF		0x1078
 #define PCIE_SOFT_PWR_RST		0x03a4
 #define PCIE_SLV_PEND_SEL_NAK		0x03d8
@@ -67,6 +68,9 @@
 
 #define LINK_WAIT_US			10
 #define LINK_WAIT_CNT			10000
+
+#define PCIE_LINK_RETRIES		10
+#define LINK_UP_POLL_CNT		50
 
 #define WLAN_POWER_ON_MS		200
 
@@ -280,32 +284,45 @@ static int zumapro_pcie_start_link(struct dw_pcie *pci)
 	struct zumapro_pcie *zp = to_zumapro_pcie(pci);
 	void __iomem *elbi = pci->elbi_base;
 	u32 val;
-	int i;
+	int try, i;
 
-	val = readl(elbi + PCIE_APP_REQ_EXIT_L1_MODE);
-	val |= APP_REQ_EXIT_L1_MODE | L1_REQ_NAK_CONTROL_MASTER;
-	writel(val, elbi + PCIE_APP_REQ_EXIT_L1_MODE);
+	for (try = 0; try < PCIE_LINK_RETRIES; try++) {
+		val = readl(elbi + PCIE_APP_REQ_EXIT_L1_MODE);
+		val |= APP_REQ_EXIT_L1_MODE | L1_REQ_NAK_CONTROL_MASTER;
+		writel(val, elbi + PCIE_APP_REQ_EXIT_L1_MODE);
 
-	writel(LINKDOWN_RST_MANUAL, elbi + PCIE_LINKDOWN_RST_CTRL_SEL);
-	writel(0x1, elbi + PCIE_APP_XFER_PENDING);
+		writel(LINKDOWN_RST_MANUAL, elbi + PCIE_LINKDOWN_RST_CTRL_SEL);
+		writel(0x1, elbi + PCIE_APP_XFER_PENDING);
 
-	val = readl(elbi + PCIE_QCH_SEL) & ~CLOCK_GATING_MASK;
-	writel(val, elbi + PCIE_QCH_SEL);
+		val = readl(elbi + PCIE_QCH_SEL) & ~CLOCK_GATING_MASK;
+		writel(val, elbi + PCIE_QCH_SEL);
 
-	writel(NACK_ENABLE, elbi + PCIE_MSTR_PEND_SEL_NAK);
+		writel(NACK_ENABLE, elbi + PCIE_MSTR_PEND_SEL_NAK);
 
-	writel(LTSSM_ENABLE, elbi + PCIE_APP_LTSSM_ENABLE);
+		writel(LTSSM_ENABLE, elbi + PCIE_APP_LTSSM_ENABLE);
 
-	for (i = 0; i < 30; i++) {
-		usleep_range(1000, 1100);
-		val = readl(elbi + PCIE_ELBI_RDLH_LINKUP) & LTSSM_STATE_MASK;
-		dev_info(pci->dev, "ltssm[%d] = 0x%02x\n", i, val);
+		for (i = 0; i < LINK_UP_POLL_CNT; i++) {
+			usleep_range(1000, 1100);
+			val = readl(elbi + PCIE_ELBI_RDLH_LINKUP) & LTSSM_STATE_MASK;
+			if (val == S_L0)
+				break;
+		}
+
+		if (val == S_L0) {
+			dev_info(pci->dev, "link up (try %d)\n", try);
+			return 0;
+		}
+
+		dev_info(pci->dev, "link try %d: ltssm=0x%02x pcs_pm=0x%08x\n",
+			 try, val, readl(zp->pcs + PCIE_PCS_PM_POWER_STATE));
+
+		writel(LTSSM_DISABLE, elbi + PCIE_APP_LTSSM_ENABLE);
+		gpiod_set_value_cansleep(zp->perst, 0);
+		usleep_range(1000, 2000);
+		zumapro_pcie_phy_config(zp);
+		gpiod_set_value_cansleep(zp->perst, 1);
+		usleep_range(zp->perst_delay_us, zp->perst_delay_us + 2000);
 	}
-
-	dev_info(pci->dev, "post: ltssm=0x%02x dbg1=0x%08x pcs_pm=0x%08x\n",
-		 readl(elbi + PCIE_ELBI_RDLH_LINKUP) & LTSSM_STATE_MASK,
-		 dw_pcie_readl_dbi(pci, PCIE_PORT_DEBUG1),
-		 readl(zp->pcs + PCIE_PCS_PM_POWER_STATE));
 
 	return 0;
 }
