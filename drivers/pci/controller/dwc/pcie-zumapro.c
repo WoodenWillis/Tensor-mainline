@@ -53,6 +53,8 @@
 #define   EXTPLL_RESETB			BIT(1)
 #define PCIE_UDBG_EXTPLL_LOCK		0xc734
 #define   EXTPLL_LOCK_BIT		2
+#define PCIE_UDBG_HSI2_CLK_CTRL		0xc800
+#define   UDBG_HSI2_CLK_CTRL_VAL	0x421
 
 #define PCIE_PHY_CLK_GATE		0x032c
 #define PCIE_PHY_PLL_LOCK		0x0a80
@@ -246,6 +248,8 @@ static void zumapro_pcie_phy_config(struct zumapro_pcie *zp)
 
 	dev_info(dev, "phy locks: extpll=%d pll=%d cdr=%d oc=%d\n",
 		 extpll, pll, cdr, oc);
+
+	writel(UDBG_HSI2_CLK_CTRL_VAL, udbg + PCIE_UDBG_HSI2_CLK_CTRL);
 
 	writel(0x0, phy + PCIE_PHY_CLK_GATE);
 	writel(0x1, elbi + PCIE_L1_EXIT_OFF);
