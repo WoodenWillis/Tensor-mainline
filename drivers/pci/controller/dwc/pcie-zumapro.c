@@ -255,6 +255,28 @@ static void zumapro_pcie_phy_config(struct zumapro_pcie *zp)
 	writel(0x1, elbi + PCIE_L1_EXIT_OFF);
 }
 
+static void zumapro_pcie_phy_pwrdn_clear(struct zumapro_pcie *zp)
+{
+	void __iomem *udbg = zp->udbg;
+	void __iomem *phy = zp->phy;
+	u32 val;
+
+	val = readl(udbg + PCIE_UDBG_EXTPLL) | EXTPLL_INIT;
+	writel(val, udbg + PCIE_UDBG_EXTPLL);
+	udelay(100);
+
+	writel(0x00, phy + 0x000c);
+	writel(0x55, phy + 0x0928);
+	writel(0x02, phy + 0x0580);
+	writel(0x00, phy + 0x0208);
+	writel(0x00, phy + 0x1044);
+	writel(0x00, phy + 0x1048);
+	writel(0x00, phy + 0x104c);
+	writel(0x00, phy + 0x1050);
+	writel(0x00, phy + 0x185c);
+	udelay(10);
+}
+
 static int zumapro_pcie_host_init(struct dw_pcie_rp *pp)
 {
 	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
@@ -271,6 +293,7 @@ static int zumapro_pcie_host_init(struct dw_pcie_rp *pp)
 	gpiod_set_value_cansleep(zp->wlan, 1);
 	msleep(WLAN_POWER_ON_MS);
 
+	zumapro_pcie_phy_pwrdn_clear(zp);
 	zumapro_pcie_phy_config(zp);
 
 	gpiod_set_value_cansleep(zp->perst, 1);
