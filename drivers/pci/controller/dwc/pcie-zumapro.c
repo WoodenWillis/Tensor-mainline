@@ -72,7 +72,7 @@
 #define LINK_WAIT_CNT			10000
 
 #define PCIE_LINK_RETRIES		10
-#define LINK_UP_POLL_CNT		50
+#define LINK_UP_POLL_CNT		200
 
 #define WLAN_POWER_ON_MS		200
 
