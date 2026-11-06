@@ -44,6 +44,8 @@
 #define   S_L0				0x11
 #define   S_L1_IDLE			0x14
 
+#define PCIE_SOC_CLK_MODE		0x4000
+#define   SOC_CLK_MODE_SW_OSC		0x15
 #define PCIE_SOC_CTRL			0x4004
 #define   SOC_CTRL_PHY_CLK_SEL_EXTPLL	(0x3 << 4)
 #define   SOC_CTRL_PHY_CLK_TCXO		BIT(2)
@@ -292,6 +294,8 @@ static int zumapro_pcie_host_init(struct dw_pcie_rp *pp)
 
 	gpiod_set_value_cansleep(zp->wlan, 1);
 	msleep(WLAN_POWER_ON_MS);
+
+	writel(SOC_CLK_MODE_SW_OSC, zp->soc + PCIE_SOC_CLK_MODE);
 
 	zumapro_pcie_phy_pwrdn_clear(zp);
 	zumapro_pcie_phy_config(zp);
