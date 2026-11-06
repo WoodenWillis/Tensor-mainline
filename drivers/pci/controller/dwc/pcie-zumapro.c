@@ -323,12 +323,15 @@ static void zumapro_pcie_reg_dump(struct zumapro_pcie *zp)
 {
 	struct dw_pcie *pci = &zp->pci;
 
+	void __iomem *phy = zp->phy;
+
 	zumapro_pcie_reg_dump_range(pci, "elbi", pci->elbi_base, 0x0, 0x480);
-	zumapro_pcie_reg_dump_range(pci, "phy", zp->phy, 0x0, 0x200);
-	zumapro_pcie_reg_dump_range(pci, "phy", zp->phy, 0x1e0, 0x220);
-	zumapro_pcie_reg_dump_range(pci, "phy", zp->phy, 0xe00, 0xed0);
+	zumapro_pcie_reg_dump_range(pci, "phy", phy, 0x0, 0x1d00);
 	zumapro_pcie_reg_dump_range(pci, "pcs", zp->pcs, 0x0, 0x200);
 
+	dev_info(pci->dev,
+		 "phy status: pll(0xa80)=%02x cdr(0x15c0)=%02x oc(0x140c)=%02x\n",
+		 readl(phy + 0x0a80), readl(phy + 0x15c0), readl(phy + 0x140c));
 	dev_info(pci->dev, "dbi linksts=%08x dbg0=%08x dbg1=%08x\n",
 		 dw_pcie_readl_dbi(pci, 0x80),
 		 dw_pcie_readl_dbi(pci, PCIE_PORT_DEBUG0),
