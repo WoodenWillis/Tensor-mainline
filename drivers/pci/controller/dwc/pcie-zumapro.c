@@ -312,36 +312,6 @@ static const struct dw_pcie_host_ops zumapro_pcie_host_ops = {
 	.init = zumapro_pcie_host_init,
 };
 
-static void zumapro_pcie_reg_dump_range(struct dw_pcie *pci, const char *tag,
-					 void __iomem *base, u32 start, u32 end)
-{
-	u32 i;
-
-	for (i = start; i < end; i += 0x10)
-		dev_info(pci->dev, "%s %04x: %08x %08x %08x %08x\n", tag, i,
-			 readl(base + i), readl(base + i + 0x4),
-			 readl(base + i + 0x8), readl(base + i + 0xc));
-}
-
-static void zumapro_pcie_reg_dump(struct zumapro_pcie *zp)
-{
-	struct dw_pcie *pci = &zp->pci;
-
-	void __iomem *phy = zp->phy;
-
-	zumapro_pcie_reg_dump_range(pci, "elbi", pci->elbi_base, 0x0, 0x480);
-	zumapro_pcie_reg_dump_range(pci, "phy", phy, 0x0, 0x1d00);
-	zumapro_pcie_reg_dump_range(pci, "pcs", zp->pcs, 0x0, 0x200);
-
-	dev_info(pci->dev,
-		 "phy status: pll(0xa80)=%02x cdr(0x15c0)=%02x oc(0x140c)=%02x\n",
-		 readl(phy + 0x0a80), readl(phy + 0x15c0), readl(phy + 0x140c));
-	dev_info(pci->dev, "dbi linksts=%08x dbg0=%08x dbg1=%08x\n",
-		 dw_pcie_readl_dbi(pci, 0x80),
-		 dw_pcie_readl_dbi(pci, PCIE_PORT_DEBUG0),
-		 dw_pcie_readl_dbi(pci, PCIE_PORT_DEBUG1));
-}
-
 static int zumapro_pcie_start_link(struct dw_pcie *pci)
 {
 	struct zumapro_pcie *zp = to_zumapro_pcie(pci);
@@ -372,9 +342,6 @@ static int zumapro_pcie_start_link(struct dw_pcie *pci)
 
 	dev_info(pci->dev, "ltssm after enable: 0x%02x pcs_pm=0x%08x\n",
 		 val, readl(zp->pcs + PCIE_PCS_PM_POWER_STATE));
-
-	if (val != S_L0)
-		zumapro_pcie_reg_dump(zp);
 
 	return 0;
 }
