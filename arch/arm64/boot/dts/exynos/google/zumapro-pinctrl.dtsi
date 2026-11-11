@@ -42,6 +42,24 @@
 	};
 };
 
+&pinctrl_far_alive {
+	gpa5: gpa5-gpio-bank {
+		gpio-controller;
+		#gpio-cells = <2>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+		interrupt-parent = <&gic>;
+		interrupts = <GIC_SPI 60 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI 61 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI 62 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI 63 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI 64 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI 65 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI 66 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH 0>;
+	};
+};
+
 &pinctrl_hsi1 {
 	gph0: gph0-gpio-bank {
 		gpio-controller;
