@@ -8,6 +8,7 @@
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/gpio/consumer.h>
+#include <linux/interrupt.h>
 #include <linux/iopoll.h>
 #include <linux/mfd/syscon.h>
 #include <linux/module.h>
@@ -17,6 +18,12 @@
 
 #include "pcie-designware.h"
 
+#define PCIE_IRQ0			0x0000
+#define PCIE_IRQ1			0x0004
+#define PCIE_IRQ2			0x0008
+#define   IRQ_MSI_RISING_ASSERT		BIT(17)
+#define PCIE_IRQ2_EN			0x0018
+#define   IRQ_MSI_CTRL_EN_RISING_EDG	BIT(17)
 #define PCIE_DEVICE_TYPE		0x0080
 #define   DEVICE_TYPE_RC		0x4
 #define PCIE_APP_LTSSM_ENABLE		0x0054
@@ -279,6 +286,60 @@ static void zumapro_pcie_phy_pwrdn_clear(struct zumapro_pcie *zp)
 	udelay(10);
 }
 
+static u32 zumapro_pcie_irq_ack(void __iomem *elbi, u32 reg)
+{
+	u32 val = readl(elbi + reg);
+
+	writel(val, elbi + reg);
+
+	return val;
+}
+
+static void zumapro_pcie_msi_rearm(struct dw_pcie_rp *pp)
+{
+	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+	unsigned int ctrl, num_ctrls = pp->num_vectors / MAX_MSI_IRQS_PER_CTRL;
+	unsigned long flags;
+
+	raw_spin_lock_irqsave(&pp->lock, flags);
+	for (ctrl = 0; ctrl < num_ctrls; ctrl++) {
+		u32 reg = PCIE_MSI_INTR0_MASK + ctrl * MSI_REG_CTRL_BLOCK_SIZE;
+
+		dw_pcie_writel_dbi(pci, reg, ~0);
+		dw_pcie_writel_dbi(pci, reg, pp->irq_mask[ctrl]);
+	}
+	raw_spin_unlock_irqrestore(&pp->lock, flags);
+}
+
+static irqreturn_t zumapro_pcie_irq_handler(int irq, void *arg)
+{
+	struct dw_pcie_rp *pp = arg;
+	void __iomem *elbi = to_dw_pcie_from_pp(pp)->elbi_base;
+	u32 irq2;
+
+	zumapro_pcie_irq_ack(elbi, PCIE_IRQ0);
+	zumapro_pcie_irq_ack(elbi, PCIE_IRQ1);
+	irq2 = zumapro_pcie_irq_ack(elbi, PCIE_IRQ2);
+
+	if (irq2 & IRQ_MSI_RISING_ASSERT) {
+		dw_handle_msi_irq(pp);
+		zumapro_pcie_msi_rearm(pp);
+	}
+
+	return IRQ_HANDLED;
+}
+
+static void zumapro_pcie_msi_enable(struct zumapro_pcie *zp)
+{
+	void __iomem *elbi = zp->pci.elbi_base;
+	u32 val;
+
+	zumapro_pcie_irq_ack(elbi, PCIE_IRQ2);
+
+	val = readl(elbi + PCIE_IRQ2_EN) | IRQ_MSI_CTRL_EN_RISING_EDG;
+	writel(val, elbi + PCIE_IRQ2_EN);
+}
+
 static int zumapro_pcie_host_init(struct dw_pcie_rp *pp)
 {
 	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
@@ -304,6 +365,8 @@ static int zumapro_pcie_host_init(struct dw_pcie_rp *pp)
 
 	gpiod_set_value_cansleep(zp->perst, 1);
 	usleep_range(zp->perst_delay_us, zp->perst_delay_us + 2000);
+
+	zumapro_pcie_msi_enable(zp);
 
 	return 0;
 }
@@ -384,6 +447,7 @@ static int zumapro_pcie_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct device_node *np = dev->of_node;
 	struct zumapro_pcie *zp;
+	int irq, ret;
 
 	zp = devm_kzalloc(dev, sizeof(*zp), GFP_KERNEL);
 	if (!zp)
@@ -427,9 +491,20 @@ static int zumapro_pcie_probe(struct platform_device *pdev)
 				 &zp->perst_delay_us))
 		zp->perst_delay_us = 15000;
 
+	irq = platform_get_irq(pdev, 0);
+	if (irq < 0)
+		return irq;
+
 	platform_set_drvdata(pdev, zp);
 
-	return dw_pcie_host_init(&zp->pci.pp);
+	zp->pci.pp.msi_irq[0] = -ENODEV;
+
+	ret = dw_pcie_host_init(&zp->pci.pp);
+	if (ret)
+		return ret;
+
+	return devm_request_irq(dev, irq, zumapro_pcie_irq_handler, 0,
+				"zumapro-pcie", &zp->pci.pp);
 }
 
 static const struct of_device_id zumapro_pcie_of_match[] = {
