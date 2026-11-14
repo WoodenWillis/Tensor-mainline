@@ -4,6 +4,7 @@
 #include <linux/bits.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
+#include <linux/iopoll.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
 #include <linux/of.h>
@@ -39,6 +40,7 @@
 
 #define DECON_GLOBAL_CON		0x0020
 #define DECON_GLOBAL_CON_RUN_STATUS	BIT(4)
+#define DECON_GLOBAL_CON_IDLE_STATUS	BIT(5)
 #define DECON_TRIG_CON			0x0030
 #define DECON_TRIG_CON_HW_TRIG_EN	BIT(0)
 #define DECON_TRIG_CON_SW_TRIG_DET_EN	BIT(1)
@@ -83,6 +85,30 @@ static u32 rdma_shadow_read(struct zumapro_decon *zd, u32 reg)
 static bool decon_is_running(struct zumapro_decon *zd)
 {
 	return readl(zd->decon + DECON_GLOBAL_CON) & DECON_GLOBAL_CON_RUN_STATUS;
+}
+
+static void decon_te_mask(struct zumapro_decon *zd)
+{
+	u32 trig = readl(zd->decon + DECON_TRIG_CON);
+
+	trig &= ~DECON_TRIG_CON_HW_TRIG_EN;
+	trig |= DECON_TRIG_CON_HW_TRIG_MASK;
+	writel(trig, zd->decon + DECON_TRIG_CON);
+}
+
+static void decon_wait_idle(struct zumapro_decon *zd)
+{
+	u32 con;
+
+	if (readl_poll_timeout(zd->decon + DECON_GLOBAL_CON, con,
+			       con & DECON_GLOBAL_CON_IDLE_STATUS, 100, 50000))
+		dev_warn_ratelimited(zd->sysfb.dev.dev, "DECON0 still busy, updating anyway\n");
+}
+
+static void decon_hold_frames(struct zumapro_decon *zd)
+{
+	decon_te_mask(zd);
+	decon_wait_idle(zd);
 }
 
 /* TODO(will): re-mask the trigger at frame start so idle TEs don't refresh from memory. */
@@ -139,15 +165,21 @@ static void zumapro_decon_crtc_disable_vblank(struct drm_crtc *crtc)
 static void zumapro_decon_plane_atomic_update(struct drm_plane *plane,
 					      struct drm_atomic_commit *state)
 {
+	struct zumapro_decon *zd = to_zumapro_decon(plane->dev);
+
+	decon_hold_frames(zd);
 	drm_sysfb_plane_helper_atomic_update(plane, state);
-	decon_te_trigger(to_zumapro_decon(plane->dev));
+	decon_te_trigger(zd);
 }
 
 static void zumapro_decon_plane_atomic_disable(struct drm_plane *plane,
 					       struct drm_atomic_commit *state)
 {
+	struct zumapro_decon *zd = to_zumapro_decon(plane->dev);
+
+	decon_hold_frames(zd);
 	drm_sysfb_plane_helper_atomic_disable(plane, state);
-	decon_te_trigger(to_zumapro_decon(plane->dev));
+	decon_te_trigger(zd);
 }
 
 static const u64 zumapro_decon_plane_format_modifiers[] = {
