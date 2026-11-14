@@ -602,6 +602,8 @@
 		reg = <0x0 0x19470000 0x1000>,
 		      <0x0 0x19900000 0x1000>;
 		reg-names = "decon", "rdma";
+		interrupts = <GIC_SPI 243 IRQ_TYPE_LEVEL_HIGH 0>;
+		interrupt-names = "frame_start";
 		status = "disabled";
 	};
 
