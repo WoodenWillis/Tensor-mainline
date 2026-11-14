@@ -2,6 +2,7 @@
 
 #include <linux/aperture.h>
 #include <linux/bits.h>
+#include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
@@ -26,6 +27,8 @@
 #include <drm/drm_modeset_helper_vtables.h>
 #include <drm/drm_print.h>
 #include <drm/drm_probe_helper.h>
+#include <drm/drm_vblank.h>
+#include <drm/drm_vblank_helper.h>
 
 #include "drm_sysfb_helper.h"
 
@@ -44,6 +47,11 @@
 #define DECON_TRIG_CON_HW_TRIG_SEL	GENMASK(25, 24)
 #define DECON_SHD_REG_UP_REQ		0x0050
 #define DECON_SHD_REG_UP_REQ_GLOBAL	BIT(31)
+#define DECON_INT_EN			0x0060
+#define DECON_INT_EN_INT_EN		BIT(0)
+#define DECON_INT_EN_FRAME_START	BIT(12)
+#define DECON_INT_PEND			0x0070
+#define DECON_INT_PEND_FRAME_START	BIT(12)
 
 #define RDMA_DMA_SHD_OFFSET		0x0400
 #define RDMA_IMG_SIZE			0x001c
@@ -89,6 +97,45 @@ static void decon_te_trigger(struct zumapro_decon *zd)
 	writel(DECON_SHD_REG_UP_REQ_GLOBAL, zd->decon + DECON_SHD_REG_UP_REQ);
 }
 
+static void decon_frame_start_irq_mask(struct zumapro_decon *zd)
+{
+	u32 en = readl(zd->decon + DECON_INT_EN);
+
+	writel(en & ~DECON_INT_EN_FRAME_START, zd->decon + DECON_INT_EN);
+}
+
+static void decon_frame_start_irq_unmask(struct zumapro_decon *zd)
+{
+	u32 en = readl(zd->decon + DECON_INT_EN);
+
+	writel(DECON_INT_PEND_FRAME_START, zd->decon + DECON_INT_PEND);
+	writel(en | DECON_INT_EN_FRAME_START | DECON_INT_EN_INT_EN,
+	       zd->decon + DECON_INT_EN);
+}
+
+static irqreturn_t decon_frame_start_irq(int irq, void *data)
+{
+	struct zumapro_decon *zd = data;
+
+	if (!(readl(zd->decon + DECON_INT_PEND) & DECON_INT_PEND_FRAME_START))
+		return IRQ_NONE;
+
+	writel(DECON_INT_PEND_FRAME_START, zd->decon + DECON_INT_PEND);
+	drm_crtc_handle_vblank(&zd->crtc);
+	return IRQ_HANDLED;
+}
+
+static int zumapro_decon_crtc_enable_vblank(struct drm_crtc *crtc)
+{
+	decon_frame_start_irq_unmask(to_zumapro_decon(crtc->dev));
+	return 0;
+}
+
+static void zumapro_decon_crtc_disable_vblank(struct drm_crtc *crtc)
+{
+	decon_frame_start_irq_mask(to_zumapro_decon(crtc->dev));
+}
+
 static void zumapro_decon_plane_atomic_update(struct drm_plane *plane,
 					      struct drm_atomic_commit *state)
 {
@@ -123,11 +170,14 @@ static const struct drm_plane_funcs zumapro_decon_plane_funcs = {
 
 static const struct drm_crtc_helper_funcs zumapro_decon_crtc_helper_funcs = {
 	DRM_SYSFB_CRTC_HELPER_FUNCS,
+	DRM_CRTC_HELPER_VBLANK_FUNCS,
 };
 
 static const struct drm_crtc_funcs zumapro_decon_crtc_funcs = {
 	DRM_SYSFB_CRTC_FUNCS,
 	.destroy = drm_crtc_cleanup,
+	.enable_vblank = zumapro_decon_crtc_enable_vblank,
+	.disable_vblank = zumapro_decon_crtc_disable_vblank,
 };
 
 static const struct drm_encoder_funcs zumapro_decon_encoder_funcs = {
@@ -213,6 +263,17 @@ static int zumapro_decon_map_fb(struct zumapro_decon *zd, struct platform_device
 	return 0;
 }
 
+static int zumapro_decon_request_irq(struct zumapro_decon *zd, struct platform_device *pdev)
+{
+	int irq = platform_get_irq_byname(pdev, "frame_start");
+
+	if (irq < 0)
+		return irq;
+
+	decon_frame_start_irq_mask(zd);
+	return devm_request_irq(&pdev->dev, irq, decon_frame_start_irq, 0, DRIVER_NAME, zd);
+}
+
 static int zumapro_decon_init_modeset(struct zumapro_decon *zd)
 {
 	struct drm_device *dev = &zd->sysfb.dev;
@@ -265,6 +326,10 @@ static int zumapro_decon_init_modeset(struct zumapro_decon *zd)
 	drm_connector_helper_add(&zd->connector, &zumapro_decon_connector_helper_funcs);
 
 	ret = drm_connector_attach_encoder(&zd->connector, &zd->encoder);
+	if (ret)
+		return ret;
+
+	ret = drm_vblank_init(dev, 1);
 	if (ret)
 		return ret;
 
@@ -322,6 +387,10 @@ static int zumapro_decon_probe(struct platform_device *pdev)
 		return ret;
 
 	ret = zumapro_decon_init_modeset(zd);
+	if (ret)
+		return ret;
+
+	ret = zumapro_decon_request_irq(zd, pdev);
 	if (ret)
 		return ret;
 
