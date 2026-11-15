@@ -49,6 +49,7 @@
 #define DECON_TRIG_CON_HW_TRIG_SEL	GENMASK(25, 24)
 #define DECON_SHD_REG_UP_REQ		0x0050
 #define DECON_SHD_REG_UP_REQ_GLOBAL	BIT(31)
+#define DECON_SHD_REG_UP_REQ_WINDOWS	GENMASK(13, 0)
 #define DECON_INT_EN			0x0060
 #define DECON_INT_EN_INT_EN		BIT(0)
 #define DECON_INT_EN_FRAME_START	BIT(12)
@@ -59,8 +60,8 @@
 #define RDMA_IN_CTRL_0			0x0008
 #define RDMA_IN_CTRL_0_IMG_FORMAT	GENMASK(13, 8)
 #define RDMA_IN_CTRL_0_ALPHA		GENMASK(31, 24)
-/* IDMA_IMG_FORMAT_XRGB8888 */
-#define RDMA_IMG_FORMAT_XRGB8888	7
+/* IDMA_IMG_FORMAT_BGRX8888 */
+#define RDMA_IMG_FORMAT_XRGB8888	4
 #define RDMA_IMG_SIZE			0x001c
 #define RDMA_BASEADDR_P0		0x0040
 #define RDMA_SRC_STRIDE_0		0x0050
@@ -101,12 +102,14 @@ static void decon_te_trigger(struct zumapro_decon *zd)
 		  DECON_TRIG_CON_HW_TRIG_MASK | DECON_TRIG_CON_HW_TRIG_SEL);
 	trig |= DECON_TRIG_CON_HW_TRIG_EN;
 	writel(trig, zd->decon + DECON_TRIG_CON);
-	writel(DECON_SHD_REG_UP_REQ_GLOBAL, zd->decon + DECON_SHD_REG_UP_REQ);
+	writel(DECON_SHD_REG_UP_REQ_GLOBAL | DECON_SHD_REG_UP_REQ_WINDOWS,
+	       zd->decon + DECON_SHD_REG_UP_REQ);
 }
 
 static bool decon_update_is_pending(struct zumapro_decon *zd)
 {
-	return readl(zd->decon + DECON_SHD_REG_UP_REQ) & DECON_SHD_REG_UP_REQ_GLOBAL;
+	return readl(zd->decon + DECON_SHD_REG_UP_REQ) &
+	       (DECON_SHD_REG_UP_REQ_GLOBAL | DECON_SHD_REG_UP_REQ_WINDOWS);
 }
 
 static void decon_scan_from(struct zumapro_decon *zd, u32 base)
