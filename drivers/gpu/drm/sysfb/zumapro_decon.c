@@ -58,6 +58,7 @@
 #define RDMA_DMA_SHD_OFFSET		0x0400
 #define RDMA_IN_CTRL_0			0x0008
 #define RDMA_IN_CTRL_0_IMG_FORMAT	GENMASK(13, 8)
+#define RDMA_IN_CTRL_0_ALPHA		GENMASK(31, 24)
 /* IDMA_IMG_FORMAT_XRGB8888 */
 #define RDMA_IMG_FORMAT_XRGB8888	7
 #define RDMA_IMG_SIZE			0x001c
@@ -119,7 +120,8 @@ static void rdma_set_xrgb8888(struct zumapro_decon *zd)
 	u32 ctrl = readl(zd->rdma + RDMA_IN_CTRL_0);
 
 	ctrl &= ~RDMA_IN_CTRL_0_IMG_FORMAT;
-	ctrl |= FIELD_PREP(RDMA_IN_CTRL_0_IMG_FORMAT, RDMA_IMG_FORMAT_XRGB8888);
+	ctrl |= FIELD_PREP(RDMA_IN_CTRL_0_IMG_FORMAT, RDMA_IMG_FORMAT_XRGB8888) |
+		RDMA_IN_CTRL_0_ALPHA;
 	writel(ctrl, zd->rdma + RDMA_IN_CTRL_0);
 }
 
