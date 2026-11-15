@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 #include <linux/aperture.h>
+#include <linux/bitfield.h>
 #include <linux/bits.h>
+#include <linux/dma-mapping.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
-#include <linux/iopoll.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
 #include <linux/of.h>
@@ -13,16 +14,16 @@
 
 #include <drm/clients/drm_client_setup.h>
 #include <drm/drm_atomic.h>
+#include <drm/drm_atomic_helper.h>
 #include <drm/drm_connector.h>
-#include <drm/drm_damage_helper.h>
 #include <drm/drm_device.h>
 #include <drm/drm_drv.h>
 #include <drm/drm_framebuffer.h>
-#include <drm/drm_fbdev_shmem.h>
+#include <drm/drm_fb_dma_helper.h>
+#include <drm/drm_fbdev_dma.h>
 #include <drm/drm_fourcc.h>
-#include <drm/drm_gem_atomic_helper.h>
+#include <drm/drm_gem_dma_helper.h>
 #include <drm/drm_gem_framebuffer_helper.h>
-#include <drm/drm_gem_shmem_helper.h>
 #include <drm/drm_managed.h>
 #include <drm/drm_modeset_helper.h>
 #include <drm/drm_modeset_helper_vtables.h>
@@ -40,7 +41,6 @@
 
 #define DECON_GLOBAL_CON		0x0020
 #define DECON_GLOBAL_CON_RUN_STATUS	BIT(4)
-#define DECON_GLOBAL_CON_IDLE_STATUS	BIT(5)
 #define DECON_TRIG_CON			0x0030
 #define DECON_TRIG_CON_HW_TRIG_EN	BIT(0)
 #define DECON_TRIG_CON_SW_TRIG_DET_EN	BIT(1)
@@ -56,6 +56,10 @@
 #define DECON_INT_PEND_FRAME_START	BIT(12)
 
 #define RDMA_DMA_SHD_OFFSET		0x0400
+#define RDMA_IN_CTRL_0			0x0008
+#define RDMA_IN_CTRL_0_IMG_FORMAT	GENMASK(13, 8)
+/* IDMA_IMG_FORMAT_XRGB8888 */
+#define RDMA_IMG_FORMAT_XRGB8888	7
 #define RDMA_IMG_SIZE			0x001c
 #define RDMA_BASEADDR_P0		0x0040
 #define RDMA_SRC_STRIDE_0		0x0050
@@ -65,7 +69,7 @@ struct zumapro_decon {
 	struct drm_sysfb_device sysfb;
 	void __iomem *decon;
 	void __iomem *rdma;
-	u32 formats[DRM_SYSFB_PLANE_NFORMATS(1)];
+	u32 abl_base;
 	struct drm_plane primary_plane;
 	struct drm_crtc crtc;
 	struct drm_encoder encoder;
@@ -87,30 +91,6 @@ static bool decon_is_running(struct zumapro_decon *zd)
 	return readl(zd->decon + DECON_GLOBAL_CON) & DECON_GLOBAL_CON_RUN_STATUS;
 }
 
-static void decon_te_mask(struct zumapro_decon *zd)
-{
-	u32 trig = readl(zd->decon + DECON_TRIG_CON);
-
-	trig &= ~DECON_TRIG_CON_HW_TRIG_EN;
-	trig |= DECON_TRIG_CON_HW_TRIG_MASK;
-	writel(trig, zd->decon + DECON_TRIG_CON);
-}
-
-static void decon_wait_idle(struct zumapro_decon *zd)
-{
-	u32 con;
-
-	if (readl_poll_timeout(zd->decon + DECON_GLOBAL_CON, con,
-			       con & DECON_GLOBAL_CON_IDLE_STATUS, 100, 50000))
-		dev_warn_ratelimited(zd->sysfb.dev.dev, "DECON0 still busy, updating anyway\n");
-}
-
-static void decon_hold_frames(struct zumapro_decon *zd)
-{
-	decon_te_mask(zd);
-	decon_wait_idle(zd);
-}
-
 /* TODO(will): re-mask the trigger at frame start so idle TEs don't refresh from memory. */
 static void decon_te_trigger(struct zumapro_decon *zd)
 {
@@ -121,6 +101,26 @@ static void decon_te_trigger(struct zumapro_decon *zd)
 	trig |= DECON_TRIG_CON_HW_TRIG_EN;
 	writel(trig, zd->decon + DECON_TRIG_CON);
 	writel(DECON_SHD_REG_UP_REQ_GLOBAL, zd->decon + DECON_SHD_REG_UP_REQ);
+}
+
+static bool decon_update_is_pending(struct zumapro_decon *zd)
+{
+	return readl(zd->decon + DECON_SHD_REG_UP_REQ) & DECON_SHD_REG_UP_REQ_GLOBAL;
+}
+
+static void decon_scan_from(struct zumapro_decon *zd, u32 base)
+{
+	writel(base, zd->rdma + RDMA_BASEADDR_P0);
+	decon_te_trigger(zd);
+}
+
+static void rdma_set_xrgb8888(struct zumapro_decon *zd)
+{
+	u32 ctrl = readl(zd->rdma + RDMA_IN_CTRL_0);
+
+	ctrl &= ~RDMA_IN_CTRL_0_IMG_FORMAT;
+	ctrl |= FIELD_PREP(RDMA_IN_CTRL_0_IMG_FORMAT, RDMA_IMG_FORMAT_XRGB8888);
+	writel(ctrl, zd->rdma + RDMA_IN_CTRL_0);
 }
 
 static void decon_frame_start_irq_mask(struct zumapro_decon *zd)
@@ -147,7 +147,8 @@ static irqreturn_t decon_frame_start_irq(int irq, void *data)
 		return IRQ_NONE;
 
 	writel(DECON_INT_PEND_FRAME_START, zd->decon + DECON_INT_PEND);
-	drm_crtc_handle_vblank(&zd->crtc);
+	if (!decon_update_is_pending(zd))
+		drm_crtc_handle_vblank(&zd->crtc);
 	return IRQ_HANDLED;
 }
 
@@ -162,14 +163,27 @@ static void zumapro_decon_crtc_disable_vblank(struct drm_crtc *crtc)
 	decon_frame_start_irq_mask(to_zumapro_decon(crtc->dev));
 }
 
-static void zumapro_decon_plane_atomic_update(struct drm_plane *plane,
-					      struct drm_atomic_commit *state)
+static int zumapro_decon_plane_atomic_check(struct drm_plane *plane,
+					    struct drm_atomic_commit *state)
 {
 	struct zumapro_decon *zd = to_zumapro_decon(plane->dev);
+	struct drm_plane_state *plane_state = drm_atomic_get_new_plane_state(state, plane);
+	struct drm_crtc_state *crtc_state = NULL;
+	int ret;
 
-	decon_hold_frames(zd);
-	drm_sysfb_plane_helper_atomic_update(plane, state);
-	decon_te_trigger(zd);
+	if (plane_state->crtc)
+		crtc_state = drm_atomic_get_new_crtc_state(state, plane_state->crtc);
+
+	ret = drm_atomic_helper_check_plane_state(plane_state, crtc_state,
+						  DRM_PLANE_NO_SCALING, DRM_PLANE_NO_SCALING,
+						  false, false);
+	if (ret || !plane_state->visible)
+		return ret;
+
+	if (plane_state->fb->pitches[0] != zd->sysfb.fb_pitch)
+		return -EINVAL;
+
+	return 0;
 }
 
 static void zumapro_decon_plane_atomic_disable(struct drm_plane *plane,
@@ -177,27 +191,42 @@ static void zumapro_decon_plane_atomic_disable(struct drm_plane *plane,
 {
 	struct zumapro_decon *zd = to_zumapro_decon(plane->dev);
 
-	decon_hold_frames(zd);
-	drm_sysfb_plane_helper_atomic_disable(plane, state);
-	decon_te_trigger(zd);
+	memset_io(zd->sysfb.fb_addr.vaddr_iomem, 0,
+		  zd->sysfb.fb_pitch * zd->sysfb.fb_mode.vdisplay);
+	decon_scan_from(zd, zd->abl_base);
 }
 
-static const u64 zumapro_decon_plane_format_modifiers[] = {
-	DRM_SYSFB_PLANE_FORMAT_MODIFIERS,
+static void zumapro_decon_plane_atomic_update(struct drm_plane *plane,
+					      struct drm_atomic_commit *state)
+{
+	struct zumapro_decon *zd = to_zumapro_decon(plane->dev);
+	struct drm_plane_state *plane_state = drm_atomic_get_new_plane_state(state, plane);
+
+	if (!plane_state->visible) {
+		zumapro_decon_plane_atomic_disable(plane, state);
+		return;
+	}
+
+	decon_scan_from(zd, drm_fb_dma_get_gem_addr(plane_state->fb, plane_state, 0));
+}
+
+static const u32 zumapro_decon_plane_formats[] = {
+	DRM_FORMAT_XRGB8888,
 };
 
 static const struct drm_plane_helper_funcs zumapro_decon_plane_helper_funcs = {
-	.begin_fb_access = drm_sysfb_plane_helper_begin_fb_access,
-	.end_fb_access = drm_gem_end_shadow_fb_access,
-	.atomic_check = drm_sysfb_plane_helper_atomic_check,
+	.atomic_check = zumapro_decon_plane_atomic_check,
 	.atomic_update = zumapro_decon_plane_atomic_update,
 	.atomic_disable = zumapro_decon_plane_atomic_disable,
-	.get_scanout_buffer = drm_sysfb_plane_helper_get_scanout_buffer,
 };
 
 static const struct drm_plane_funcs zumapro_decon_plane_funcs = {
-	DRM_SYSFB_PLANE_FUNCS,
+	.update_plane = drm_atomic_helper_update_plane,
+	.disable_plane = drm_atomic_helper_disable_plane,
 	.destroy = drm_plane_cleanup,
+	.reset = drm_atomic_helper_plane_reset,
+	.atomic_duplicate_state = drm_atomic_helper_plane_duplicate_state,
+	.atomic_destroy_state = drm_atomic_helper_plane_destroy_state,
 };
 
 static const struct drm_crtc_helper_funcs zumapro_decon_crtc_helper_funcs = {
@@ -226,7 +255,9 @@ static const struct drm_connector_funcs zumapro_decon_connector_funcs = {
 };
 
 static const struct drm_mode_config_funcs zumapro_decon_mode_config_funcs = {
-	DRM_SYSFB_MODE_CONFIG_FUNCS,
+	.fb_create = drm_gem_fb_create,
+	.atomic_check = drm_atomic_helper_check,
+	.atomic_commit = drm_atomic_helper_commit,
 };
 
 static int zumapro_decon_map_regs(struct zumapro_decon *zd, struct platform_device *pdev)
@@ -267,6 +298,7 @@ static int zumapro_decon_read_scanout(struct zumapro_decon *zd, struct resource 
 	zd->sysfb.fb_mode = drm_sysfb_mode(width, height, 0, 0);
 	zd->sysfb.fb_format = format;
 	zd->sysfb.fb_pitch = stride;
+	zd->abl_base = base;
 	drm_info(dev, "inherited DECON0 scanout %ux%u stride %u at %pR\n",
 		 width, height, stride, fb);
 	return 0;
@@ -311,7 +343,6 @@ static int zumapro_decon_init_modeset(struct zumapro_decon *zd)
 	struct drm_device *dev = &zd->sysfb.dev;
 	const struct drm_format_info *format = zd->sysfb.fb_format;
 	struct drm_display_mode *mode = &zd->sysfb.fb_mode;
-	size_t nformats;
 	int ret;
 
 	ret = drmm_mode_config_init(dev);
@@ -327,17 +358,13 @@ static int zumapro_decon_init_modeset(struct zumapro_decon *zd)
 	dev->mode_config.preferred_depth = format->depth;
 	dev->mode_config.funcs = &zumapro_decon_mode_config_funcs;
 
-	nformats = drm_sysfb_build_fourcc_list(dev, &format->format, 1,
-					       zd->formats, ARRAY_SIZE(zd->formats));
-
 	ret = drm_universal_plane_init(dev, &zd->primary_plane, 0, &zumapro_decon_plane_funcs,
-				       zd->formats, nformats,
-				       zumapro_decon_plane_format_modifiers,
+				       zumapro_decon_plane_formats,
+				       ARRAY_SIZE(zumapro_decon_plane_formats), NULL,
 				       DRM_PLANE_TYPE_PRIMARY, NULL);
 	if (ret)
 		return ret;
 	drm_plane_helper_add(&zd->primary_plane, &zumapro_decon_plane_helper_funcs);
-	drm_plane_enable_fb_damage_clips(&zd->primary_plane);
 
 	ret = drm_crtc_init_with_planes(dev, &zd->crtc, &zd->primary_plane, NULL,
 					&zumapro_decon_crtc_funcs, NULL);
@@ -369,11 +396,11 @@ static int zumapro_decon_init_modeset(struct zumapro_decon *zd)
 	return 0;
 }
 
-DEFINE_DRM_GEM_FOPS(zumapro_decon_fops);
+DEFINE_DRM_GEM_DMA_FOPS(zumapro_decon_fops);
 
 static const struct drm_driver zumapro_decon_driver = {
-	DRM_GEM_SHMEM_DRIVER_OPS,
-	DRM_FBDEV_SHMEM_DRIVER_OPS,
+	DRM_GEM_DMA_DRIVER_OPS,
+	DRM_FBDEV_DMA_DRIVER_OPS,
 	.name = DRIVER_NAME,
 	.desc = DRIVER_DESC,
 	.major = DRIVER_MAJOR,
@@ -384,8 +411,7 @@ static const struct drm_driver zumapro_decon_driver = {
 
 static int zumapro_decon_probe(struct platform_device *pdev)
 {
-	/* TODO(will): read the pixel format from RDMA0 instead of assuming it. */
-	const struct drm_format_info *format = drm_format_info(DRM_FORMAT_ARGB8888);
+	const struct drm_format_info *format = drm_format_info(DRM_FORMAT_XRGB8888);
 	struct zumapro_decon *zd;
 	struct drm_device *dev;
 	struct resource fb;
@@ -417,6 +443,12 @@ static int zumapro_decon_probe(struct platform_device *pdev)
 	ret = zumapro_decon_map_fb(zd, pdev, &fb);
 	if (ret)
 		return ret;
+
+	ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
+	if (ret)
+		return ret;
+
+	rdma_set_xrgb8888(zd);
 
 	ret = zumapro_decon_init_modeset(zd);
 	if (ret)
