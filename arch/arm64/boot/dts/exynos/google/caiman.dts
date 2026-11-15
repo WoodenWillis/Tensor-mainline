@@ -23,6 +23,14 @@
 			reg = <0x0 0xfac00000 0xe00000>;
 			no-map;
 		};
+
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x8000000>;
+			alloc-ranges = <0x0 0x80000000 0x80000000>;
+			linux,cma-default;
+		};
 	};
 
 	memory@80000000 {
