@@ -600,8 +600,9 @@
 	decon0: display-controller@19470000 {
 		compatible = "google,zumapro-decon";
 		reg = <0x0 0x19470000 0x1000>,
-		      <0x0 0x19900000 0x1000>;
-		reg-names = "decon", "rdma";
+		      <0x0 0x19900000 0x1000>,
+		      <0x0 0x19440000 0x300>;
+		reg-names = "decon", "rdma", "dsim";
 		interrupts = <GIC_SPI 243 IRQ_TYPE_LEVEL_HIGH 0>;
 		interrupt-names = "frame_start";
 		status = "disabled";

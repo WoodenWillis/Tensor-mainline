@@ -85,6 +85,10 @@
 &decon0 {
 	memory-region = <&abl_framebuffer>;
 	status = "okay";
+
+	panel {
+		compatible = "google,cm4";
+	};
 };
 
 &gpu {
