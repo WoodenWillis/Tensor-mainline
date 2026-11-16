@@ -6,6 +6,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
+#include <linux/iopoll.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
 #include <linux/of.h>
@@ -31,6 +32,8 @@
 #include <drm/drm_probe_helper.h>
 #include <drm/drm_vblank.h>
 #include <drm/drm_vblank_helper.h>
+
+#include <video/mipi_display.h>
 
 #include "drm_sysfb_helper.h"
 
@@ -67,10 +70,27 @@
 #define RDMA_SRC_STRIDE_0		0x0050
 #define RDMA_SRC_STRIDE_0_MASK		GENMASK(23, 0)
 
+#define DSIM_INTSRC			0x0050
+#define DSIM_INTSRC_SFR_PH_FIFO_EMPTY	BIT(28)
+#define DSIM_INTSRC_SFR_PL_FIFO_EMPTY	BIT(29)
+#define DSIM_PKTHDR			0x0058
+#define DSIM_PAYLOAD			0x005c
+#define DSIM_FIFOCTRL			0x0068
+#define DSIM_FIFOCTRL_EMPTY_PH_SFR	BIT(10)
+
+#define CM4_HDISPLAY			1280
+#define CM4_VDISPLAY			2856
+
+struct cm4_cmd {
+	u8 len;
+	u8 data[4];
+};
+
 struct zumapro_decon {
 	struct drm_sysfb_device sysfb;
 	void __iomem *decon;
 	void __iomem *rdma;
+	void __iomem *dsim;
 	u32 abl_base;
 	struct drm_plane primary_plane;
 	struct drm_crtc crtc;
@@ -168,6 +188,113 @@ static void zumapro_decon_crtc_disable_vblank(struct drm_crtc *crtc)
 	decon_frame_start_irq_mask(to_zumapro_decon(crtc->dev));
 }
 
+static void dsim_write_payload(struct zumapro_decon *zd, const u8 *buf, size_t len)
+{
+	size_t i;
+	u32 word;
+
+	for (i = 0; i < len; i += sizeof(word)) {
+		word = 0;
+		memcpy(&word, buf + i, min(sizeof(word), len - i));
+		writel(le32_to_cpu((__force __le32)word), zd->dsim + DSIM_PAYLOAD);
+	}
+}
+
+static u32 dsim_dcs_header(const u8 *buf, size_t len)
+{
+	if (len == 1)
+		return MIPI_DSI_DCS_SHORT_WRITE | buf[0] << 8;
+	if (len == 2)
+		return MIPI_DSI_DCS_SHORT_WRITE_PARAM | buf[0] << 8 | buf[1] << 16;
+	return MIPI_DSI_DCS_LONG_WRITE | (len & 0xff) << 8 | (len >> 8) << 16;
+}
+
+static int dsim_dcs_write(struct zumapro_decon *zd, const u8 *buf, size_t len)
+{
+	u32 fifo;
+
+	writel(DSIM_INTSRC_SFR_PH_FIFO_EMPTY | DSIM_INTSRC_SFR_PL_FIFO_EMPTY,
+	       zd->dsim + DSIM_INTSRC);
+	if (len > 2)
+		dsim_write_payload(zd, buf, len);
+	writel(dsim_dcs_header(buf, len), zd->dsim + DSIM_PKTHDR);
+
+	return readl_poll_timeout(zd->dsim + DSIM_FIFOCTRL, fifo,
+				  fifo & DSIM_FIFOCTRL_EMPTY_PH_SFR, 200, 100000);
+}
+
+static void cm4_set_refresh(struct zumapro_decon *zd, unsigned int hz)
+{
+	const u8 rate = hz == 60 ? 0x01 : 0x00;
+	const struct cm4_cmd cmds[] = {
+		{ 3, { 0xf0, 0x5a, 0x5a } },
+		{ 4, { 0xb0, 0x00, 0x02, 0xb9 } },
+		{ 2, { 0xb9, rate } },
+		{ 2, { 0xbd, 0x21 } },
+		{ 2, { 0x60, rate } },
+		{ 2, { 0xf7, 0x0f } },
+		{ 3, { 0xf0, 0xa5, 0xa5 } },
+	};
+	unsigned int i;
+	int ret;
+
+	for (i = 0; i < ARRAY_SIZE(cmds); i++) {
+		ret = dsim_dcs_write(zd, cmds[i].data, cmds[i].len);
+		if (ret) {
+			drm_err(&zd->sysfb.dev, "cm4: DCS %#04x failed: %d\n",
+				cmds[i].data[0], ret);
+			return;
+		}
+	}
+}
+
+static void zumapro_decon_crtc_mode_set_nofb(struct drm_crtc *crtc)
+{
+	struct zumapro_decon *zd = to_zumapro_decon(crtc->dev);
+
+	if (zd->dsim)
+		cm4_set_refresh(zd, drm_mode_vrefresh(&crtc->state->adjusted_mode));
+}
+
+/* panel-gs-cm4.c: DRM_MODE_TIMING(hz, 1280, 80, 24, 46, 2856, 12, 4, 28), 66 x 147 mm */
+#define CM4_MODE(hz, mode_type) \
+	.clock = 1430 * 2900 * (hz) / 1000, \
+	.hdisplay = CM4_HDISPLAY, .hsync_start = 1360, .hsync_end = 1384, .htotal = 1430, \
+	.vdisplay = CM4_VDISPLAY, .vsync_start = 2868, .vsync_end = 2872, .vtotal = 2900, \
+	.width_mm = 66, .height_mm = 147, \
+	.type = DRM_MODE_TYPE_DRIVER | (mode_type)
+
+static const struct drm_display_mode cm4_modes[] = {
+	{ CM4_MODE(120, DRM_MODE_TYPE_PREFERRED) },
+	{ CM4_MODE(60, 0) },
+};
+
+static int cm4_get_modes(struct drm_connector *connector)
+{
+	struct drm_display_mode *mode;
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(cm4_modes); i++) {
+		mode = drm_mode_duplicate(connector->dev, &cm4_modes[i]);
+		if (!mode)
+			break;
+		drm_mode_set_name(mode);
+		drm_mode_probed_add(connector, mode);
+	}
+
+	connector->display_info.width_mm = cm4_modes[0].width_mm;
+	connector->display_info.height_mm = cm4_modes[0].height_mm;
+	return i;
+}
+
+static int zumapro_decon_connector_get_modes(struct drm_connector *connector)
+{
+	if (to_zumapro_decon(connector->dev)->dsim)
+		return cm4_get_modes(connector);
+
+	return drm_sysfb_connector_helper_get_modes(connector);
+}
+
 static int zumapro_decon_plane_atomic_check(struct drm_plane *plane,
 					    struct drm_atomic_commit *state)
 {
@@ -237,6 +364,7 @@ static const struct drm_plane_funcs zumapro_decon_plane_funcs = {
 static const struct drm_crtc_helper_funcs zumapro_decon_crtc_helper_funcs = {
 	DRM_SYSFB_CRTC_HELPER_FUNCS,
 	DRM_CRTC_HELPER_VBLANK_FUNCS,
+	.mode_set_nofb = zumapro_decon_crtc_mode_set_nofb,
 };
 
 static const struct drm_crtc_funcs zumapro_decon_crtc_funcs = {
@@ -251,7 +379,7 @@ static const struct drm_encoder_funcs zumapro_decon_encoder_funcs = {
 };
 
 static const struct drm_connector_helper_funcs zumapro_decon_connector_helper_funcs = {
-	DRM_SYSFB_CONNECTOR_HELPER_FUNCS,
+	.get_modes = zumapro_decon_connector_get_modes,
 };
 
 static const struct drm_connector_funcs zumapro_decon_connector_funcs = {
@@ -273,6 +401,22 @@ static int zumapro_decon_map_regs(struct zumapro_decon *zd, struct platform_devi
 
 	zd->rdma = devm_platform_ioremap_resource_byname(pdev, "rdma");
 	return PTR_ERR_OR_ZERO(zd->rdma);
+}
+
+static int zumapro_decon_map_panel(struct zumapro_decon *zd, struct platform_device *pdev)
+{
+	struct device_node *panel = of_get_compatible_child(pdev->dev.of_node, "google,cm4");
+	const struct drm_display_mode *mode = &zd->sysfb.fb_mode;
+
+	if (!panel)
+		return 0;
+	of_node_put(panel);
+
+	if (mode->hdisplay != CM4_HDISPLAY || mode->vdisplay != CM4_VDISPLAY)
+		return dev_err_probe(&pdev->dev, -EINVAL, "scanout is not a cm4 panel's size\n");
+
+	zd->dsim = devm_platform_ioremap_resource_byname(pdev, "dsim");
+	return PTR_ERR_OR_ZERO(zd->dsim);
 }
 
 static int zumapro_decon_read_scanout(struct zumapro_decon *zd, struct resource *fb,
@@ -442,6 +586,10 @@ static int zumapro_decon_probe(struct platform_device *pdev)
 		return dev_err_probe(&pdev->dev, ret, "no framebuffer memory-region\n");
 
 	ret = zumapro_decon_read_scanout(zd, &fb, format);
+	if (ret)
+		return ret;
+
+	ret = zumapro_decon_map_panel(zd, pdev);
 	if (ret)
 		return ret;
 
