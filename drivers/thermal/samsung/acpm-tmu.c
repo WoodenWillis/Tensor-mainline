@@ -36,20 +36,7 @@
 #define GS101_CPUCL0_SENSOR_MASK (EXYNOS_TMU_SENSOR(1) |	\
 				  EXYNOS_TMU_SENSOR(2))
 
-#define ZUMAPRO_BIG_SENSOR_MASK (EXYNOS_TMU_SENSOR(1) |	\
-				 EXYNOS_TMU_SENSOR(2))
-#define ZUMAPRO_MID_SENSOR_MASK (EXYNOS_TMU_SENSOR(4) |	\
-				 EXYNOS_TMU_SENSOR(5) |	\
-				 EXYNOS_TMU_SENSOR(6) |	\
-				 EXYNOS_TMU_SENSOR(7))
-#define ZUMAPRO_LIT_SENSOR_MASK (EXYNOS_TMU_SENSOR(8) |	\
-				 EXYNOS_TMU_SENSOR(9))
-#define ZUMAPRO_GPU_SENSOR_MASK (EXYNOS_TMU_SENSOR(10) |	\
-				 EXYNOS_TMU_SENSOR(11) |	\
-				 EXYNOS_TMU_SENSOR(12))
-
 #define GS101_REG_INTPEND(i)		((i) * 0x50 + 0xf8)
-#define ZUMAPRO_REG_INTPEND(i)		((i) * 0x40 + 0x128)
 
 enum {
 	P0_INTPEND,
@@ -96,7 +83,6 @@ struct acpm_tmu_priv {
 };
 
 struct acpm_tmu_driver_data {
-	const struct regmap_config *regmap_config;
 	const struct reg_field *reg_fields;
 	const struct acpm_tmu_sensor_group *sensor_groups;
 	unsigned int num_sensor_groups;
@@ -143,63 +129,9 @@ static const struct regmap_config gs101_regmap_config = {
 };
 
 static const struct acpm_tmu_driver_data acpm_tmu_gs101 = {
-	.regmap_config = &gs101_regmap_config,
 	.reg_fields = gs101_reg_fields,
 	.sensor_groups = gs101_sensor_groups,
 	.num_sensor_groups = ARRAY_SIZE(gs101_sensor_groups),
-	.mbox_chan_id = 9,
-};
-
-static const struct acpm_tmu_sensor_group zumapro_top_sensor_groups[] = {
-	ACPM_TMU_SENSOR_GROUP(ZUMAPRO_BIG_SENSOR_MASK, 0),
-	ACPM_TMU_SENSOR_GROUP(ZUMAPRO_MID_SENSOR_MASK, 1),
-	ACPM_TMU_SENSOR_GROUP(ZUMAPRO_LIT_SENSOR_MASK, 2),
-};
-
-static const struct acpm_tmu_sensor_group zumapro_sub_sensor_groups[] = {
-	ACPM_TMU_SENSOR_GROUP(ZUMAPRO_GPU_SENSOR_MASK, 3),
-};
-
-static const struct reg_field zumapro_reg_fields[REG_INTPEND_COUNT] = {
-	[P0_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(0), 0, 31),
-	[P1_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(1), 0, 31),
-	[P2_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(2), 0, 31),
-	[P3_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(3), 0, 31),
-	[P4_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(4), 0, 31),
-	[P5_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(5), 0, 31),
-	[P6_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(6), 0, 31),
-	[P7_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(7), 0, 31),
-	[P8_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(8), 0, 31),
-	[P9_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(9), 0, 31),
-	[P10_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(10), 0, 31),
-	[P11_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(11), 0, 31),
-	[P12_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(12), 0, 31),
-	[P13_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(13), 0, 31),
-	[P14_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(14), 0, 31),
-	[P15_INTPEND] = REG_FIELD(ZUMAPRO_REG_INTPEND(15), 0, 31),
-};
-
-static const struct regmap_config zumapro_regmap_config = {
-	.reg_bits = 32,
-	.reg_stride = 4,
-	.val_bits = 32,
-	.use_relaxed_mmio = true,
-	.max_register = ZUMAPRO_REG_INTPEND(15),
-};
-
-static const struct acpm_tmu_driver_data acpm_tmu_zumapro_top = {
-	.regmap_config = &zumapro_regmap_config,
-	.reg_fields = zumapro_reg_fields,
-	.sensor_groups = zumapro_top_sensor_groups,
-	.num_sensor_groups = ARRAY_SIZE(zumapro_top_sensor_groups),
-	.mbox_chan_id = 9,
-};
-
-static const struct acpm_tmu_driver_data acpm_tmu_zumapro_sub = {
-	.regmap_config = &zumapro_regmap_config,
-	.reg_fields = zumapro_reg_fields,
-	.sensor_groups = zumapro_sub_sensor_groups,
-	.num_sensor_groups = ARRAY_SIZE(zumapro_sub_sensor_groups),
 	.mbox_chan_id = 9,
 };
 
@@ -240,7 +172,7 @@ static void acpm_tmu_control_rollback(struct acpm_tmu_priv *priv, int start_idx)
 	}
 }
 
-static int acpm_tmu_control(struct acpm_tmu_priv *priv, bool on)
+static int acpm_tmu_control(struct acpm_tmu_priv *priv, bool on, bool rollback)
 {
 	struct device *dev = priv->dev;
 	int i, ret, err = 0;
@@ -263,8 +195,8 @@ static int acpm_tmu_control(struct acpm_tmu_priv *priv, bool on)
 			if (!err)
 				err = ret;
 
-			/* On enable, stop on first error. On disable, keep going */
-			if (on) {
+			/* On enable, stop on first error if rollback is requested */
+			if (on && rollback) {
 				acpm_tmu_control_rollback(priv, i - 1);
 				break;
 			}
@@ -464,16 +396,14 @@ static irqreturn_t acpm_tmu_thread_fn(int irq, void *id)
 }
 
 static const struct of_device_id acpm_tmu_match[] = {
-	{ .compatible = "google,gs101-tmu-top", .data = &acpm_tmu_gs101 },
-	{ .compatible = "google,zumapro-tmu-sub", .data = &acpm_tmu_zumapro_sub },
-	{ .compatible = "google,zumapro-tmu-top", .data = &acpm_tmu_zumapro_top },
+	{ .compatible = "google,gs101-tmu-top" },
 	{ /* sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, acpm_tmu_match);
 
 static int acpm_tmu_probe(struct platform_device *pdev)
 {
-	const struct acpm_tmu_driver_data *data;
+	const struct acpm_tmu_driver_data *data = &acpm_tmu_gs101;
 	struct acpm_handle *acpm_handle;
 	struct device *dev = &pdev->dev;
 	struct acpm_tmu_priv *priv;
@@ -481,18 +411,12 @@ static int acpm_tmu_probe(struct platform_device *pdev)
 	void __iomem *base;
 	int i, ret;
 
-	data = of_device_get_match_data(dev);
-	if (!data)
-		return -ENODEV;
-
 	acpm_handle = devm_acpm_get_by_phandle(dev);
 	if (IS_ERR(acpm_handle))
 		return dev_err_probe(dev, PTR_ERR(acpm_handle),
 				     "Failed to get ACPM handle\n");
 
-	priv = devm_kzalloc(dev,
-			    struct_size(priv, sensors, data->num_sensor_groups),
-			    GFP_KERNEL);
+	priv = devm_kzalloc_flex(dev, *priv, sensors, data->num_sensor_groups);
 	if (!priv)
 		return -ENOMEM;
 
@@ -507,7 +431,7 @@ static int acpm_tmu_probe(struct platform_device *pdev)
 	if (IS_ERR(base))
 		return dev_err_probe(dev, PTR_ERR(base), "Failed to ioremap resource\n");
 
-	regmap = devm_regmap_init_mmio(dev, base, data->regmap_config);
+	regmap = devm_regmap_init_mmio(dev, base, &gs101_regmap_config);
 	if (IS_ERR(regmap))
 		return dev_err_probe(dev, PTR_ERR(regmap), "Failed to init regmap\n");
 
@@ -595,6 +519,7 @@ static int acpm_tmu_probe(struct platform_device *pdev)
 err_rollback:
 	acpm_tmu_control_rollback(priv, i - 1);
 err_pm_put:
+	pm_runtime_dont_use_autosuspend(dev);
 	pm_runtime_put_sync(dev);
 	return ret;
 }
@@ -612,7 +537,7 @@ static void acpm_tmu_remove(struct platform_device *pdev)
 	 * immediately, preventing clock leaks when the driver is removed.
 	 */
 	pm_runtime_dont_use_autosuspend(&pdev->dev);
-	acpm_tmu_control(priv, false);
+	acpm_tmu_control(priv, false, false);
 }
 
 static int acpm_tmu_suspend(struct device *dev)
@@ -620,24 +545,36 @@ static int acpm_tmu_suspend(struct device *dev)
 	struct acpm_tmu_priv *priv = dev_get_drvdata(dev);
 	struct acpm_handle *handle = priv->handle;
 	const struct acpm_tmu_ops *ops = &handle->ops->tmu;
-	int ret;
+	int ret, restore_ret;
 
-	ret = acpm_tmu_control(priv, false);
+	ret = acpm_tmu_control(priv, false, false);
 	if (ret)
-		return ret;
+		goto err_restore_sensors;
 
 	/* APB clock not required for this specific msg */
 	ret = ops->suspend(handle, priv->mbox_chan_id);
-	if (ret) {
-		int restore_ret = acpm_tmu_control(priv, true);
+	if (ret)
+		goto err_restore_sensors;
 
-		if (restore_ret)
-			dev_err(dev, "Failed to re-enable TMU after suspend failure: %d\n",
-				restore_ret);
-		return ret;
-	}
+	ret = pm_runtime_force_suspend(dev);
+	if (ret)
+		goto err_resume_acpm;
 
 	return 0;
+
+err_resume_acpm:
+	restore_ret = ops->resume(handle, priv->mbox_chan_id);
+	if (restore_ret)
+		dev_err(dev, "Failed to resume ACPM after force suspend failure: %d\n",
+			restore_ret);
+
+err_restore_sensors:
+	restore_ret = acpm_tmu_control(priv, true, false);
+	if (restore_ret)
+		dev_err(dev, "Failed to re-enable TMU after suspend failure: %d\n",
+			restore_ret);
+
+	return ret;
 }
 
 static int acpm_tmu_resume(struct device *dev)
@@ -645,14 +582,34 @@ static int acpm_tmu_resume(struct device *dev)
 	struct acpm_tmu_priv *priv = dev_get_drvdata(dev);
 	struct acpm_handle *handle = priv->handle;
 	const struct acpm_tmu_ops *ops = &handle->ops->tmu;
-	int ret;
+	int ret, restore_ret;
 
 	/* APB clock not required for this specific msg */
 	ret = ops->resume(handle, priv->mbox_chan_id);
 	if (ret)
 		return ret;
 
-	return acpm_tmu_control(priv, true);
+	ret = pm_runtime_force_resume(dev);
+	if (ret)
+		goto err_suspend_acpm;
+
+	ret = acpm_tmu_control(priv, true, true);
+	if (ret)
+		goto err_suspend_pm;
+
+	return 0;
+
+err_suspend_pm:
+	restore_ret = pm_runtime_force_suspend(dev);
+	if (restore_ret)
+		dev_err(dev, "Failed to force suspend during resume rollback: %d\n",
+			restore_ret);
+err_suspend_acpm:
+	restore_ret = ops->suspend(handle, priv->mbox_chan_id);
+	if (restore_ret)
+		dev_err(dev, "Failed to suspend ACPM during resume rollback: %d\n",
+			restore_ret);
+	return ret;
 }
 
 static int acpm_tmu_runtime_suspend(struct device *dev)

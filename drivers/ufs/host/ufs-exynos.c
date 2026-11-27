@@ -1543,7 +1543,7 @@ static int exynos_ufs_init(struct ufs_hba *hba)
 	struct exynos_ufs *ufs;
 	int ret;
 
-	ufs = devm_kzalloc(dev, sizeof(*ufs), GFP_KERNEL);
+	ufs = devm_kzalloc_obj(dev, *ufs);
 	if (!ufs)
 		return -ENOMEM;
 
@@ -1788,7 +1788,9 @@ static int exynos_ufs_pwr_change_notify(struct ufs_hba *hba,
 		ret = exynos_ufs_pre_pwr_mode(hba, dev_req_params);
 		break;
 	case POST_CHANGE:
-		ret = exynos_ufs_post_pwr_mode(hba, dev_req_params);
+		/* NULL when the gear switch failed: nothing to apply */
+		if (dev_req_params)
+			ret = exynos_ufs_post_pwr_mode(hba, dev_req_params);
 		break;
 	}
 
@@ -1884,7 +1886,7 @@ static int exynosauto_ufs_vh_init(struct ufs_hba *hba)
 	struct exynos_ufs *ufs;
 	int ret;
 
-	ufs = devm_kzalloc(dev, sizeof(*ufs), GFP_KERNEL);
+	ufs = devm_kzalloc_obj(dev, *ufs);
 	if (!ufs)
 		return -ENOMEM;
 

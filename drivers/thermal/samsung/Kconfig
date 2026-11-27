@@ -15,11 +15,11 @@ config EXYNOS_ACPM_THERMAL
 	tristate "Exynos ACPM thermal management unit driver"
 	depends on THERMAL_OF
 	depends on HAS_IOMEM
-	depends on EXYNOS_ACPM_PROTOCOL || (COMPILE_TEST && !EXYNOS_ACPM_PROTOCOL)
+	depends on EXYNOS_ACPM_PROTOCOL
 	default ARCH_EXYNOS
 	help
 	  Support for the Thermal Management Unit (TMU) on Samsung Exynos SoCs
-	  (such as Google GS101 and Exynos850).
+	  utilizing the ACPM IPC protocol, such as the Google GS101.
 
 	  The TMU on these platforms is managed through a hybrid architecture.
 	  This driver handles direct register access for thermal interrupt status

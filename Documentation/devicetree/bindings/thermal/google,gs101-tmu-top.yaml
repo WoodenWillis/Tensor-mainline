@@ -25,10 +25,7 @@ description:
 
 properties:
   compatible:
-    enum:
-      - google,gs101-tmu-top
-      - google,zumapro-tmu-sub
-      - google,zumapro-tmu-top
+    const: google,gs101-tmu-top
 
   reg:
     maxItems: 1
