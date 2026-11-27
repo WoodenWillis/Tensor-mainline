@@ -225,10 +225,20 @@ static int exynos_ufs_shareability(struct exynos_ufs *ufs)
 	return 0;
 }
 
+static int tensor_ufs_drv_init(struct exynos_ufs *ufs)
+{
+	u32 reg;
+
+	/* set ACG to be controlled by UFS_ACG_DISABLE */
+	reg = hci_readl(ufs, HCI_IOP_ACG_DISABLE);
+	hci_writel(ufs, reg & (~HCI_IOP_ACG_DISABLE_EN), HCI_IOP_ACG_DISABLE);
+
+	return exynos_ufs_shareability(ufs);
+}
+
 static int gs101_ufs_drv_init(struct exynos_ufs *ufs)
 {
 	struct ufs_hba *hba = ufs->hba;
-	u32 reg;
 
 	/* Enable WriteBooster */
 	hba->caps |= UFSHCD_CAP_WB_EN;
@@ -236,11 +246,7 @@ static int gs101_ufs_drv_init(struct exynos_ufs *ufs)
 	/* Enable clock gating and hibern8 */
 	hba->caps |= UFSHCD_CAP_CLK_GATING | UFSHCD_CAP_HIBERN8_WITH_CLK_GATING;
 
-	/* set ACG to be controlled by UFS_ACG_DISABLE */
-	reg = hci_readl(ufs, HCI_IOP_ACG_DISABLE);
-	hci_writel(ufs, reg & (~HCI_IOP_ACG_DISABLE_EN), HCI_IOP_ACG_DISABLE);
-
-	return exynos_ufs_shareability(ufs);
+	return tensor_ufs_drv_init(ufs);
 }
 
 static int exynosauto_ufs_drv_init(struct exynos_ufs *ufs)
@@ -1116,11 +1122,11 @@ static int exynos_ufs_setup_clocks(struct ufs_hba *hba, bool on,
 	if (!ufs)
 		return 0;
 
-	if (on && status == PRE_CHANGE) {
+	if (on && status == POST_CHANGE) {
 		if (ufs->opts & EXYNOS_UFS_OPT_BROKEN_AUTO_CLK_CTRL)
 			exynos_ufs_disable_auto_ctrl_hcc(ufs);
 		exynos_ufs_ungate_clks(ufs);
-	} else if (!on && status == POST_CHANGE) {
+	} else if (!on && status == PRE_CHANGE) {
 		exynos_ufs_gate_clks(ufs);
 		if (ufs->opts & EXYNOS_UFS_OPT_BROKEN_AUTO_CLK_CTRL)
 			exynos_ufs_enable_auto_ctrl_hcc(ufs);
@@ -1139,7 +1145,7 @@ static int exynos_ufs_pre_link(struct ufs_hba *hba)
 	exynos_ufs_config_intr(ufs, DFES_DEF_L4_ERRS, UNIPRO_L4);
 	exynos_ufs_set_unipro_pclk_div(ufs);
 
-	exynos_ufs_setup_clocks(hba, true, PRE_CHANGE);
+	exynos_ufs_setup_clocks(hba, true, POST_CHANGE);
 
 	/* unipro */
 	exynos_ufs_config_unipro(ufs);
@@ -2012,7 +2018,7 @@ static inline u32 get_mclk_period_unipro_18(struct exynos_ufs *ufs)
 	return (16 * 1000 * 1000000UL / ufs->mclk_rate);
 }
 
-static int gs101_ufs_pre_link(struct exynos_ufs *ufs)
+static void tensor_ufs_config_pcs_lanes(struct exynos_ufs *ufs, u32 rx_cfg_2f)
 {
 	struct ufs_hba *hba = ufs->hba;
 	int i;
@@ -2022,10 +2028,6 @@ static int gs101_ufs_pre_link(struct exynos_ufs *ufs)
 				/ NSEC_PER_MSEC;
 	tx_line_reset_period = (TX_LINE_RESET_TIME * ufs->mclk_rate)
 				/ NSEC_PER_MSEC;
-
-	unipro_writel(ufs, get_mclk_period_unipro_18(ufs), COMP_CLK_PERIOD);
-
-	ufshcd_dme_set(hba, UIC_ARG_MIB(0x200), 0x40);
 
 	for_each_ufs_rx_lane(ufs, i) {
 		ufshcd_dme_set(hba, UIC_ARG_MIB_SEL(VND_RX_CLK_PRD, i),
@@ -2037,7 +2039,7 @@ static int gs101_ufs_pre_link(struct exynos_ufs *ufs)
 			       (rx_line_reset_period >> 8) & 0xFF);
 		ufshcd_dme_set(hba, UIC_ARG_MIB_SEL(VND_RX_LINERESET_VALUE0, i),
 			       (rx_line_reset_period) & 0xFF);
-		ufshcd_dme_set(hba, UIC_ARG_MIB_SEL(0x2f, i), 0x69);
+		ufshcd_dme_set(hba, UIC_ARG_MIB_SEL(0x2f, i), rx_cfg_2f);
 		ufshcd_dme_set(hba, UIC_ARG_MIB_SEL(0x84, i), 0x1);
 		ufshcd_dme_set(hba, UIC_ARG_MIB_SEL(0x25, i), 0xf6);
 	}
@@ -2056,14 +2058,45 @@ static int gs101_ufs_pre_link(struct exynos_ufs *ufs)
 		ufshcd_dme_set(hba, UIC_ARG_MIB_SEL(0x04, i), 1);
 		ufshcd_dme_set(hba, UIC_ARG_MIB_SEL(0x7F, i), 0);
 	}
+}
 
-	ufshcd_dme_set(hba, UIC_ARG_MIB(0x200), 0x0);
+static void tensor_ufs_config_cport(struct ufs_hba *hba)
+{
 	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_LOCAL_TX_LCC_ENABLE), 0x0);
 	ufshcd_dme_set(hba, UIC_ARG_MIB(N_DEVICEID), 0x0);
 	ufshcd_dme_set(hba, UIC_ARG_MIB(N_DEVICEID_VALID), 0x1);
 	ufshcd_dme_set(hba, UIC_ARG_MIB(T_PEERDEVICEID), 0x1);
 	ufshcd_dme_set(hba, UIC_ARG_MIB(T_CONNECTIONSTATE), CPORT_CONNECTED);
+}
+
+static int gs101_ufs_pre_link(struct exynos_ufs *ufs)
+{
+	struct ufs_hba *hba = ufs->hba;
+
+	unipro_writel(ufs, get_mclk_period_unipro_18(ufs), COMP_CLK_PERIOD);
+
+	ufshcd_dme_set(hba, UIC_ARG_MIB(0x200), 0x40);
+	tensor_ufs_config_pcs_lanes(ufs, 0x69);
+	ufshcd_dme_set(hba, UIC_ARG_MIB(0x200), 0x0);
+
+	tensor_ufs_config_cport(hba);
 	ufshcd_dme_set(hba, UIC_ARG_MIB(0xA006), 0x8000);
+
+	return 0;
+}
+
+static int zumapro_ufs_pre_link(struct exynos_ufs *ufs)
+{
+	struct ufs_hba *hba = ufs->hba;
+
+	unipro_writel(ufs, get_mclk_period_unipro_18(ufs), COMP_CLK_PERIOD);
+
+	ufshcd_dme_set(hba, UIC_ARG_MIB(0x200), 0x40);
+	ufshcd_dme_set(hba, UIC_ARG_MIB(0x202), 0x22);
+	tensor_ufs_config_pcs_lanes(ufs, 0x79);
+	ufshcd_dme_set(hba, UIC_ARG_MIB(0x200), 0x0);
+
+	tensor_ufs_config_cport(hba);
 
 	return 0;
 }
@@ -2296,6 +2329,23 @@ static const struct exynos_ufs_drv_data gs101_ufs_drvs = {
 	.suspend		= gs101_ufs_suspend,
 };
 
+/* TODO(will): CLK_GATING + HIBERN8_WITH_CLK_GATING once zumapro PHY h8 tables land */
+static const struct exynos_ufs_drv_data zumapro_ufs_drvs = {
+	.uic_attr		= &gs101_uic_attr,
+	.quirks			= UFSHCI_QUIRK_SKIP_MANUAL_WB_FLUSH_CTRL |
+				  UFSHCD_QUIRK_BROKEN_AUTO_HIBERN8 |
+				  UFSHCD_QUIRK_SKIP_DEF_UNIPRO_TIMEOUT_SETTING,
+	.opts			= EXYNOS_UFS_OPT_SKIP_CONFIG_PHY_ATTR |
+				  EXYNOS_UFS_OPT_UFSPR_SECURE |
+				  EXYNOS_UFS_OPT_TIMER_TICK_SELECT,
+	.iocc_mask		= UFS_GS101_SHARABLE,
+	.drv_init		= tensor_ufs_drv_init,
+	.pre_link		= zumapro_ufs_pre_link,
+	.post_link		= gs101_ufs_post_link,
+	.pre_pwr_change		= gs101_ufs_pre_pwr_change,
+	.suspend		= gs101_ufs_suspend,
+};
+
 static const struct exynos_ufs_drv_data exynosautov920_ufs_drvs = {
 	.uic_attr               = &exynos7_uic_attr,
 	.quirks                 = UFSHCD_QUIRK_SKIP_DEF_UNIPRO_TIMEOUT_SETTING,
@@ -2314,6 +2364,8 @@ static const struct exynos_ufs_drv_data exynosautov920_ufs_drvs = {
 static const struct of_device_id exynos_ufs_of_match[] = {
 	{ .compatible = "google,gs101-ufs",
 	  .data	      = &gs101_ufs_drvs },
+	{ .compatible = "google,zumapro-ufs",
+	  .data	      = &zumapro_ufs_drvs },
 	{ .compatible = "samsung,exynos7-ufs",
 	  .data	      = &exynos_ufs_drvs },
 	{ .compatible = "samsung,exynosautov9-ufs",

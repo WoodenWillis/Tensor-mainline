@@ -50,6 +50,8 @@ struct exynos_pmu_data {
 	const struct exynos_pmu_conf *pmu_config_extra;
 	bool pmu_secure;
 	bool pmu_cpuhp;
+	bool no_pmu_intr_gen;
+	bool inform0_allows_c2;
 
 	void (*pmu_init)(void);
 	void (*powerdown_conf)(enum sys_powerdown);
@@ -71,6 +73,7 @@ extern const struct exynos_pmu_data exynos5250_pmu_data;
 extern const struct exynos_pmu_data exynos5420_pmu_data;
 #endif
 extern const struct exynos_pmu_data gs101_pmu_data;
+extern const struct exynos_pmu_data zumapro_pmu_data;
 
 extern void pmu_raw_writel(u32 val, u32 offset);
 extern u32 pmu_raw_readl(u32 offset);

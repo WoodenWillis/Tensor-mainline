@@ -11,3 +11,4 @@ obj-$(CONFIG_DRM_EFIDRM)	+= efidrm.o
 obj-$(CONFIG_DRM_OFDRM)		+= ofdrm.o
 obj-$(CONFIG_DRM_SIMPLEDRM)	+= simpledrm.o
 obj-$(CONFIG_DRM_VESADRM)	+= vesadrm.o
+obj-$(CONFIG_DRM_ZUMAPRO_DECON)	+= zumapro_decon.o

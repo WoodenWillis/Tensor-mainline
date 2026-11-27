@@ -30,27 +30,13 @@ properties:
               - google,gs101-raven
           - const: google,gs101
 
-      # Google Tensor G4 AKA zumapro SoC and boards
-      - description: 
-          Google Pixel 9, 9 Pro, 9 Pro XL (Tokay, Caiman, Komodo).
+      - description: Google Pixel 9 Pro (Caiman)
         items:
           - enum:
-              - google,zumapro-tokay
               - google,zumapro-caiman
-              - google,zumapro-komodo
           - const: google,zumapro
 
-      # Google Tensor G5 AKA lga (laguna) SoC and boards
-      - description:
-          Google Pixel 10, 10 Pro, 10 Pro XL (Frankel, Blazer,
-          Mustang).
-        items:
-          - enum:
-              - google,lga-blazer
-              - google,lga-frankel
-              - google,lga-mustang
-          - const: google,lga
-
+  # Bootloader requires empty ect node to be present
   ect:
     type: object
     additionalProperties: false

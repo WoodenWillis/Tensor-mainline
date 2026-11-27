@@ -1,0 +1,1086 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Google Tensor G4 (zumapro) SoC
+ *
+ * Copyright 2026 Will
+ */
+
+#include <dt-bindings/clock/google,zumapro.h>
+#include <dt-bindings/clock/google,zumapro-acpm.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+
+/ {
+	compatible = "google,zumapro";
+	#address-cells = <2>;
+	#size-cells = <1>;
+
+	interrupt-parent = <&gic>;
+
+	aliases {
+		pinctrl0 = &pinctrl_alive;
+		pinctrl1 = &pinctrl_custom_alive;
+		pinctrl2 = &pinctrl_far_alive;
+		pinctrl3 = &pinctrl_gsacore0;
+		pinctrl4 = &pinctrl_gsacore1;
+		pinctrl5 = &pinctrl_gsacore2;
+		pinctrl6 = &pinctrl_gsacore3;
+		pinctrl7 = &pinctrl_gsactrl;
+		pinctrl8 = &pinctrl_hsi1;
+		pinctrl9 = &pinctrl_hsi2;
+		pinctrl10 = &pinctrl_hsi2ufs;
+		pinctrl11 = &pinctrl_peric0;
+		pinctrl12 = &pinctrl_peric1;
+		serial0 = &serial_0;
+	};
+
+	chosen {
+		bootargs = "earlycon=exynos4210,mmio32,0x10870000 console=ttySAC0,921600n8";
+		stdout-path = "serial0:921600n8";
+	};
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu-map {
+			cluster0 {
+				core0 { cpu = <&cpu0>; };
+				core1 { cpu = <&cpu1>; };
+				core2 { cpu = <&cpu2>; };
+				core3 { cpu = <&cpu3>; };
+			};
+
+			cluster1 {
+				core0 { cpu = <&cpu4>; };
+				core1 { cpu = <&cpu5>; };
+				core2 { cpu = <&cpu6>; };
+			};
+
+			cluster2 {
+				core0 { cpu = <&cpu7>; };
+			};
+		};
+
+		cpu0: cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a520";
+			reg = <0x0>;
+			capacity-dmips-mhz = <193>;
+			dynamic-power-coefficient = <70>;
+			cpu-idle-states = <&hayes_cpu_sleep>;
+			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL0>;
+			enable-method = "psci";
+			#cooling-cells = <2>;
+			operating-points-v2 = <&cpucl0_opp_table>;
+		};
+
+		cpu1: cpu@100 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a520";
+			reg = <0x100>;
+			capacity-dmips-mhz = <193>;
+			dynamic-power-coefficient = <70>;
+			cpu-idle-states = <&hayes_cpu_sleep>;
+			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL0>;
+			enable-method = "psci";
+			#cooling-cells = <2>;
+			operating-points-v2 = <&cpucl0_opp_table>;
+		};
+
+		cpu2: cpu@200 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a520";
+			reg = <0x200>;
+			capacity-dmips-mhz = <193>;
+			dynamic-power-coefficient = <70>;
+			cpu-idle-states = <&hayes_cpu_sleep>;
+			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL0>;
+			enable-method = "psci";
+			#cooling-cells = <2>;
+			operating-points-v2 = <&cpucl0_opp_table>;
+		};
+
+		cpu3: cpu@300 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a520";
+			reg = <0x300>;
+			capacity-dmips-mhz = <193>;
+			dynamic-power-coefficient = <70>;
+			cpu-idle-states = <&hayes_cpu_sleep>;
+			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL0>;
+			enable-method = "psci";
+			#cooling-cells = <2>;
+			operating-points-v2 = <&cpucl0_opp_table>;
+		};
+
+		cpu4: cpu@400 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a720";
+			reg = <0x400>;
+			capacity-dmips-mhz = <927>;
+			dynamic-power-coefficient = <513>;
+			cpu-idle-states = <&hunter_cpu_sleep>;
+			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL1>;
+			enable-method = "psci";
+			#cooling-cells = <2>;
+			operating-points-v2 = <&cpucl1_opp_table>;
+		};
+
+		cpu5: cpu@500 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a720";
+			reg = <0x500>;
+			capacity-dmips-mhz = <927>;
+			dynamic-power-coefficient = <513>;
+			cpu-idle-states = <&hunter_cpu_sleep>;
+			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL1>;
+			enable-method = "psci";
+			#cooling-cells = <2>;
+			operating-points-v2 = <&cpucl1_opp_table>;
+		};
+
+		cpu6: cpu@600 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a720";
+			reg = <0x600>;
+			capacity-dmips-mhz = <927>;
+			dynamic-power-coefficient = <513>;
+			cpu-idle-states = <&hunter_cpu_sleep>;
+			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL1>;
+			enable-method = "psci";
+			#cooling-cells = <2>;
+			operating-points-v2 = <&cpucl1_opp_table>;
+		};
+
+		cpu7: cpu@700 {
+			device_type = "cpu";
+			compatible = "arm,cortex-x4";
+			reg = <0x700>;
+			capacity-dmips-mhz = <1024>;
+			dynamic-power-coefficient = <757>;
+			cpu-idle-states = <&hunterelp_cpu_sleep>;
+			clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_CPUCL2>;
+			enable-method = "psci";
+			#cooling-cells = <2>;
+			operating-points-v2 = <&cpucl2_opp_table>;
+		};
+
+		idle-states {
+			entry-method = "psci";
+
+			hayes_cpu_sleep: cpu-hayes-sleep {
+				idle-state-name = "c2";
+				compatible = "arm,idle-state";
+				arm,psci-suspend-param = <0x0010000>;
+				local-timer-stop;
+				entry-latency-us = <70>;
+				exit-latency-us = <160>;
+				min-residency-us = <2000>;
+			};
+
+			hunter_cpu_sleep: cpu-hunter-sleep {
+				idle-state-name = "c2";
+				compatible = "arm,idle-state";
+				arm,psci-suspend-param = <0x0010000>;
+				local-timer-stop;
+				entry-latency-us = <150>;
+				exit-latency-us = <190>;
+				min-residency-us = <2500>;
+			};
+
+			hunterelp_cpu_sleep: cpu-hunterelp-sleep {
+				idle-state-name = "c2";
+				compatible = "arm,idle-state";
+				arm,psci-suspend-param = <0x0010000>;
+				local-timer-stop;
+				entry-latency-us = <235>;
+				exit-latency-us = <220>;
+				min-residency-us = <3500>;
+			};
+		};
+	};
+	cpucl0_opp_table: opp-table-0 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp-324000000 {
+			opp-hz = /bits/ 64 <324000000>;
+			opp-microvolt = <525000>;
+		};
+
+		opp-610000000 {
+			opp-hz = /bits/ 64 <610000000>;
+			opp-microvolt = <543750>;
+		};
+
+		opp-820000000 {
+			opp-hz = /bits/ 64 <820000000>;
+			opp-microvolt = <568750>;
+		};
+
+		opp-955000000 {
+			opp-hz = /bits/ 64 <955000000>;
+			opp-microvolt = <593750>;
+		};
+
+		opp-1098000000 {
+			opp-hz = /bits/ 64 <1098000000>;
+			opp-microvolt = <612500>;
+		};
+
+		opp-1197000000 {
+			opp-hz = /bits/ 64 <1197000000>;
+			opp-microvolt = <625000>;
+		};
+
+		opp-1328000000 {
+			opp-hz = /bits/ 64 <1328000000>;
+			opp-microvolt = <650000>;
+		};
+
+		opp-1425000000 {
+			opp-hz = /bits/ 64 <1425000000>;
+			opp-microvolt = <668750>;
+		};
+
+		opp-1548000000 {
+			opp-hz = /bits/ 64 <1548000000>;
+			opp-microvolt = <693750>;
+		};
+
+		opp-1696000000 {
+			opp-hz = /bits/ 64 <1696000000>;
+			opp-microvolt = <718750>;
+		};
+
+		opp-1849000000 {
+			opp-hz = /bits/ 64 <1849000000>;
+			opp-microvolt = <768750>;
+		};
+
+		opp-1950000000 {
+			opp-hz = /bits/ 64 <1950000000>;
+			opp-microvolt = <818750>;
+		};
+	};
+
+	cpucl1_opp_table: opp-table-1 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp-357000000 {
+			opp-hz = /bits/ 64 <357000000>;
+			opp-microvolt = <506250>;
+		};
+
+		opp-578000000 {
+			opp-hz = /bits/ 64 <578000000>;
+			opp-microvolt = <537500>;
+		};
+
+		opp-648000000 {
+			opp-hz = /bits/ 64 <648000000>;
+			opp-microvolt = <543750>;
+		};
+
+		opp-787000000 {
+			opp-hz = /bits/ 64 <787000000>;
+			opp-microvolt = <556250>;
+		};
+
+		opp-910000000 {
+			opp-hz = /bits/ 64 <910000000>;
+			opp-microvolt = <568750>;
+		};
+
+		opp-1065000000 {
+			opp-hz = /bits/ 64 <1065000000>;
+			opp-microvolt = <587500>;
+		};
+
+		opp-1221000000 {
+			opp-hz = /bits/ 64 <1221000000>;
+			opp-microvolt = <612500>;
+		};
+
+		opp-1328000000 {
+			opp-hz = /bits/ 64 <1328000000>;
+			opp-microvolt = <631250>;
+		};
+
+		opp-1418000000 {
+			opp-hz = /bits/ 64 <1418000000>;
+			opp-microvolt = <643750>;
+		};
+
+		opp-1549000000 {
+			opp-hz = /bits/ 64 <1549000000>;
+			opp-microvolt = <675000>;
+		};
+
+		opp-1795000000 {
+			opp-hz = /bits/ 64 <1795000000>;
+			opp-microvolt = <731250>;
+		};
+
+		opp-1945000000 {
+			opp-hz = /bits/ 64 <1945000000>;
+			opp-microvolt = <775000>;
+		};
+
+		opp-2130000000 {
+			opp-hz = /bits/ 64 <2130000000>;
+			opp-microvolt = <825000>;
+		};
+
+		opp-2245000000 {
+			opp-hz = /bits/ 64 <2245000000>;
+			opp-microvolt = <850000>;
+		};
+
+		opp-2367000000 {
+			opp-hz = /bits/ 64 <2367000000>;
+			opp-microvolt = <887500>;
+		};
+
+		opp-2450000000 {
+			opp-hz = /bits/ 64 <2450000000>;
+			opp-microvolt = <912500>;
+		};
+
+		opp-2600000000 {
+			opp-hz = /bits/ 64 <2600000000>;
+			opp-microvolt = <968750>;
+		};
+	};
+
+	cpucl2_opp_table: opp-table-2 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp-700000000 {
+			opp-hz = /bits/ 64 <700000000>;
+			opp-microvolt = <556250>;
+		};
+
+		opp-1164000000 {
+			opp-hz = /bits/ 64 <1164000000>;
+			opp-microvolt = <600000>;
+		};
+
+		opp-1396000000 {
+			opp-hz = /bits/ 64 <1396000000>;
+			opp-microvolt = <631250>;
+		};
+
+		opp-1557000000 {
+			opp-hz = /bits/ 64 <1557000000>;
+			opp-microvolt = <662500>;
+		};
+
+		opp-1745000000 {
+			opp-hz = /bits/ 64 <1745000000>;
+			opp-microvolt = <693750>;
+		};
+
+		opp-1885000000 {
+			opp-hz = /bits/ 64 <1885000000>;
+			opp-microvolt = <718750>;
+		};
+
+		opp-1999000000 {
+			opp-hz = /bits/ 64 <1999000000>;
+			opp-microvolt = <737500>;
+		};
+
+		opp-2147000000 {
+			opp-hz = /bits/ 64 <2147000000>;
+			opp-microvolt = <768750>;
+		};
+
+		opp-2294000000 {
+			opp-hz = /bits/ 64 <2294000000>;
+			opp-microvolt = <800000>;
+		};
+
+		opp-2363000000 {
+			opp-hz = /bits/ 64 <2363000000>;
+			opp-microvolt = <818750>;
+		};
+
+		opp-2499000000 {
+			opp-hz = /bits/ 64 <2499000000>;
+			opp-microvolt = <856250>;
+		};
+
+		opp-2687000000 {
+			opp-hz = /bits/ 64 <2687000000>;
+			opp-microvolt = <912500>;
+		};
+
+		opp-2802000000 {
+			opp-hz = /bits/ 64 <2802000000>;
+			opp-microvolt = <950000>;
+		};
+
+		opp-2914000000 {
+			opp-hz = /bits/ 64 <2914000000>;
+			opp-microvolt = <1000000>;
+		};
+
+		opp-2943000000 {
+			opp-hz = /bits/ 64 <2943000000>;
+			opp-microvolt = <1012500>;
+		};
+
+		opp-2970000000 {
+			opp-hz = /bits/ 64 <2970000000>;
+			opp-microvolt = <1018750>;
+		};
+
+		opp-3015000000 {
+			opp-hz = /bits/ 64 <3015000000>;
+			opp-microvolt = <1025000>;
+		};
+
+		opp-3105000000 {
+			opp-hz = /bits/ 64 <3105000000>;
+			opp-microvolt = <1068750>;
+		};
+	};
+
+	psci {
+		compatible = "arm,psci-1.0";
+		method = "smc";
+	};
+
+	ext_24_5m: clock-24576000 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24576000>;
+		clock-output-names = "oscclk";
+	};
+
+	apm_mailbox_pclk: clock-apm-mailbox {
+		/* TODO(will): replace with the real CMU_APM mailbox PCLK gate */
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24576000>;
+		clock-output-names = "apm_mailbox_pclk";
+	};
+
+	cmu_top: clock-controller@26040000 {
+		compatible = "google,zumapro-cmu-top";
+		reg = <0x0 0x26040000 0x8000>;
+		#clock-cells = <1>;
+		clocks = <&ext_24_5m>;
+		clock-names = "oscclk";
+	};
+
+	cmu_misc: clock-controller@10010000 {
+		compatible = "google,zumapro-cmu-misc";
+		reg = <0x0 0x10010000 0x8000>;
+		#clock-cells = <1>;
+		clocks = <&ext_24_5m>, <&cmu_top CLK_DOUT_CMU_MISC_NOC>;
+		clock-names = "oscclk", "bus";
+	};
+
+	tmu_top: thermal-sensor@100a0000 {
+		compatible = "google,zumapro-tmu-top";
+		reg = <0x0 0x100a0000 0x800>;
+		clocks = <&cmu_misc CLK_GOUT_MISC_TMU_TOP_PCLK>;
+		interrupts = <GIC_SPI 787 IRQ_TYPE_LEVEL_HIGH 0>;
+		samsung,acpm-ipc = <&acpm_ipc>;
+		#thermal-sensor-cells = <1>;
+	};
+
+	tmu_sub: thermal-sensor@100b0000 {
+		compatible = "google,zumapro-tmu-sub";
+		reg = <0x0 0x100b0000 0x800>;
+		clocks = <&cmu_misc CLK_GOUT_MISC_TMU_SUB_PCLK>;
+		interrupts = <GIC_SPI 804 IRQ_TYPE_LEVEL_HIGH 0>;
+		samsung,acpm-ipc = <&acpm_ipc>;
+		#thermal-sensor-cells = <1>;
+	};
+
+	cmu_peric0: clock-controller@10800000 {
+		compatible = "google,zumapro-cmu-peric0";
+		reg = <0x0 0x10800000 0x8000>;
+		#clock-cells = <1>;
+		clocks = <&ext_24_5m>,
+			 <&cmu_top CLK_DOUT_CMU_PERIC0_NOC>,
+			 <&cmu_top CLK_DOUT_CMU_PERIC0_IP>;
+		clock-names = "oscclk", "noc", "ip";
+	};
+
+	sysreg_peric0: syscon@10821000 {
+		compatible = "google,zumapro-peric0-sysreg", "syscon";
+		reg = <0x0 0x10821000 0x1000>;
+		clocks = <&cmu_peric0 CLK_GOUT_PERIC0_SYSREG_PERIC0_PCLK>;
+	};
+
+	cmu_hsi0: clock-controller@11000000 {
+		compatible = "google,zumapro-cmu-hsi0";
+		reg = <0x0 0x11000000 0x8000>;
+		#clock-cells = <1>;
+		clocks = <&ext_24_5m>,
+			 <&cmu_top CLK_DOUT_CMU_HSI0_NOC>,
+			 <&cmu_top CLK_DOUT_CMU_HSI0_PERI>;
+		clock-names = "oscclk", "noc", "peri";
+	};
+
+	sysreg_hsi0: syscon@11020000 {
+		compatible = "google,zumapro-hsi0-sysreg", "syscon";
+		reg = <0x0 0x11020000 0x2000>;
+		clocks = <&cmu_hsi0 CLK_GOUT_HSI0_SYSREG_HSI0_PCLK>;
+	};
+
+	cmu_hsi2: clock-controller@13000000 {
+		compatible = "google,zumapro-cmu-hsi2";
+		reg = <0x0 0x13000000 0x8000>;
+		#clock-cells = <1>;
+		clocks = <&ext_24_5m>,
+			 <&cmu_top CLK_DOUT_CMU_HSI2_NOC>,
+			 <&cmu_top CLK_DOUT_CMU_HSI2_UFS_EMBD>;
+		clock-names = "oscclk", "noc", "ufs_embd";
+	};
+
+	sysreg_hsi2: syscon@13020000 {
+		compatible = "google,zumapro-hsi2-sysreg", "syscon";
+		reg = <0x0 0x13020000 0x1000>;
+		clocks = <&cmu_hsi2 CLK_GOUT_HSI2_SYSREG_HSI2_PCLK>;
+	};
+
+	cmu_g3d: clock-controller@1ee00000 {
+		compatible = "google,zumapro-cmu-g3d";
+		reg = <0x0 0x1ee00000 0x8000>;
+		#clock-cells = <1>;
+		clocks = <&ext_24_5m>,
+			 <&cmu_top CLK_DOUT_CMU_G3D_GLB>,
+			 <&cmu_top CLK_DOUT_CMU_G3D_NOCD>,
+			 <&cmu_top CLK_DOUT_CMU_G3D_SWITCH>,
+			 <&cmu_top CLK_DOUT_CMU_G3D_TRACE>,
+			 <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_G3D>,
+			 <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_G3DL2>;
+		clock-names = "oscclk", "glb", "nocd", "switch", "trace",
+			      "g3d", "g3dl2";
+		assigned-clocks = <&cmu_g3d CLK_MOUT_G3D_GLB_USER>,
+				  <&cmu_g3d CLK_MOUT_G3D_NOCD_USER>,
+				  <&cmu_g3d CLK_MOUT_G3D_SWITCH_USER>;
+		assigned-clock-parents = <&cmu_top CLK_DOUT_CMU_G3D_GLB>,
+					 <&cmu_top CLK_DOUT_CMU_G3D_NOCD>,
+					 <&cmu_top CLK_DOUT_CMU_G3D_SWITCH>;
+	};
+
+	gpu_dvfs: power-controller-gpu {
+		compatible = "google,zumapro-gpu-dvfs";
+		clocks = <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_G3DL2>,
+			 <&acpm_ipc ZUMAPRO_CLK_ACPM_DVFS_G3D>;
+		clock-names = "g3dl2", "g3d";
+		#power-domain-cells = <0>;
+	};
+
+	gpu: gpu@1f000000 {
+		compatible = "google,zumapro-mali", "arm,mali-valhall-csf";
+		reg = <0x0 0x1f000000 0x480000>;
+		interrupts = <GIC_SPI 347 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI 348 IRQ_TYPE_LEVEL_HIGH 0>,
+			     <GIC_SPI 346 IRQ_TYPE_LEVEL_HIGH 0>;
+		interrupt-names = "job", "mmu", "gpu";
+		clocks = <&cmu_g3d CLK_GOUT_G3D_GPU_CLK>,
+			 <&cmu_g3d CLK_GOUT_G3D_GPU_CLK_COREGROUP>,
+			 <&cmu_g3d CLK_GOUT_G3D_GPU_CLK_STACKS>;
+		clock-names = "core", "coregroup", "stacks";
+		power-domains = <&gpu_dvfs>;
+		#cooling-cells = <2>;
+		status = "disabled";
+	};
+
+	/* TODO(will): document google,zumapro-decon once the DSI side is described. */
+	decon0: display-controller@19470000 {
+		compatible = "google,zumapro-decon";
+		reg = <0x0 0x19470000 0x1000>,
+		      <0x0 0x19900000 0x1000>;
+		reg-names = "decon", "rdma";
+		interrupts = <GIC_SPI 243 IRQ_TYPE_LEVEL_HIGH 0>;
+		interrupt-names = "frame_start";
+		status = "disabled";
+	};
+
+	ufs_0: ufs@13200000 {
+		compatible = "google,zumapro-ufs";
+		reg = <0x0 0x13200000 0x200>,
+		      <0x0 0x13201100 0x2000>,
+		      <0x0 0x13280000 0x8000>,
+		      <0x0 0x132a0000 0xa014>;
+		reg-names = "hci", "vs_hci", "unipro", "ufsp";
+		interrupts = <GIC_SPI 466 IRQ_TYPE_LEVEL_HIGH 0>;
+		clocks = <&cmu_hsi2 CLK_GOUT_HSI2_UFS_EMBD_I_ACLK>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_UFS_EMBD_I_CLK_UNIPRO>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_UFS_EMBD_I_FMP_CLK>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_QE_UFS_EMBD_HSI2_ACLK>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_QE_UFS_EMBD_HSI2_PCLK>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_SYSREG_HSI2_PCLK>;
+		clock-names = "core_clk", "sclk_unipro_main", "fmp",
+			      "aclk", "pclk", "sysreg";
+		dma-coherent;
+		freq-table-hz = <0 0>, <0 0>, <0 0>, <0 0>, <0 0>, <0 0>;
+		pinctrl-0 = <&ufs_rst_n &ufs_refclk_out>;
+		pinctrl-names = "default";
+		phys = <&ufs_0_phy>;
+		phy-names = "ufs-phy";
+		samsung,sysreg = <&sysreg_hsi2 0x710>;
+		status = "disabled";
+	};
+
+	ufs_0_phy: phy@13204000 {
+		compatible = "google,zumapro-ufs-phy";
+		reg = <0x0 0x13204000 0x4000>;
+		reg-names = "phy-pma";
+		samsung,pmu-syscon = <&pmu_system_controller>;
+		#phy-cells = <0>;
+		clocks = <&ext_24_5m>;
+		clock-names = "ref_clk";
+		status = "disabled";
+	};
+
+	pcie_1: pcie@13120000 {
+		compatible = "google,zumapro-pcie";
+		reg = <0x0 0x13400000 0x381000>,
+		      <0x0 0x13120000 0x2000>,
+		      <0x0 0x13130000 0x5000>,
+		      <0x0 0x13150000 0xd000>,
+		      <0x0 0x13160000 0x3000>,
+		      <0x0 0x13140000 0x5000>,
+		      <0x0 0x60ffe000 0x2000>;
+		reg-names = "dbi", "elbi", "soc", "udbg", "phy", "pcs", "config";
+		#address-cells = <3>;
+		#size-cells = <2>;
+		device_type = "pci";
+		num-lanes = <1>;
+		bus-range = <0x00 0xff>;
+		ranges = <0x82000000 0x0 0x60000000 0x0 0x60000000 0x0 0xff0000>;
+		interrupts = <GIC_SPI 439 IRQ_TYPE_LEVEL_HIGH 0>;
+		interrupt-names = "msi";
+		clocks = <&cmu_hsi2 CLK_GOUT_HSI2_PCIE_PHY_REFCLK>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_PCIE_DBI_ACLK>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_PCIE_MSTR_ACLK>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_PCIE_SLV_ACLK>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_PCIE_SUB_CTRL_APB>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_PCIE_PHY_UDBG_APB>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_PCIE_PIPE_PAL_APB>,
+			 <&cmu_hsi2 CLK_GOUT_HSI2_PCIE_IA>;
+		samsung,pmu-syscon = <&pmu_system_controller>;
+		samsung,pmu-offset = <0x3ec8>;
+		samsung,perst-delay-us = <15000>;
+		status = "disabled";
+	};
+
+	firmware {
+		acpm_ipc: power-management {
+			compatible = "google,zumapro-acpm-ipc";
+			#clock-cells = <1>;
+			mboxes = <&ap2apm_mailbox>;
+			shmem = <&apm_sram>;
+
+			s2mpg14_pmic: pmic-1 {
+				compatible = "samsung,s2mpg14-pmic";
+			};
+
+			s2mpg15_pmic: pmic-2 {
+				compatible = "samsung,s2mpg15-pmic";
+			};
+		};
+	};
+
+	apm_sram: sram@15700000 {
+		compatible = "mmio-sram";
+		reg = <0x0 0x15700000 0x58000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0x0 0x0 0x15700000 0x58000>;
+	};
+
+	ap2apm_mailbox: mailbox@15110000 {
+		compatible = "google,gs101-mbox";
+		reg = <0x0 0x15110000 0x1000>;
+		interrupts = <GIC_SPI 80 IRQ_TYPE_LEVEL_HIGH 0>;
+		clocks = <&apm_mailbox_pclk>;
+		clock-names = "pclk";
+		#mbox-cells = <0>;
+	};
+
+	pmu_system_controller: system-controller@15460000 {
+		compatible = "google,zumapro-pmu";
+		reg = <0x0 0x15460000 0x10000>;
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <1>;
+		ranges;
+
+		ect@90000000 {
+			reg = <0x0 0x90000000 0x60000>;
+		};
+
+		gsa@90200000 {
+			reg = <0x0 0x90200000 0x3ff000>;
+			no-map;
+		};
+
+		gsa-log@905ff000 {
+			reg = <0x0 0x905ff000 0x1000>;
+			no-map;
+		};
+
+		gxp-scratchpad@91300000 {
+			reg = <0x0 0x91300000 0x60000>;
+			no-map;
+		};
+
+		iif-wait-table@91360000 {
+			reg = <0x0 0x91360000 0x20000>;
+			no-map;
+		};
+
+		iif-signal-table@91380000 {
+			reg = <0x0 0x91380000 0x20000>;
+			no-map;
+		};
+
+		gxp-secure-data@91400000 {
+			reg = <0x0 0x91400000 0x900000>;
+			no-map;
+		};
+
+		gxp-fw@91d00000 {
+			reg = <0x0 0x91d00000 0x300000>;
+			no-map;
+		};
+
+		gxp-mcu-fw@92000000 {
+			reg = <0x0 0x92000000 0x400000>;
+			no-map;
+		};
+
+		tpu-fw@92e00000 {
+			reg = <0x0 0x92e00000 0x1200000>;
+			no-map;
+		};
+
+		aoc@94000000 {
+			reg = <0x0 0x94000000 0x3000000>;
+			no-map;
+		};
+
+		pkvm_guest_firmware: pkvm-guest-firmware@b5000000 {
+			compatible = "linux,pkvm-guest-firmware-memory";
+			reg = <0x0 0xb5000000 0xd0000>;
+			no-map;
+		};
+
+		seclog@c3000000 {
+			reg = <0x0 0xc3000000 0x80000>;
+		};
+
+		dss-header@d8100000 {
+			reg = <0x0 0xd8100000 0x10000>;
+			no-map;
+		};
+
+		dss-log-kevents@d8110000 {
+			reg = <0x0 0xd8110000 0x700000>;
+			no-map;
+		};
+
+		dss-log-s2d@d8810000 {
+			reg = <0x0 0xd8810000 0x1800000>;
+			no-map;
+		};
+
+		dss-log-array-reset@da010000 {
+			reg = <0x0 0xda010000 0xa00000>;
+			no-map;
+		};
+
+		dss-log-itmon@dda10000 {
+			reg = <0x0 0xdda10000 0x10000>;
+			no-map;
+		};
+
+		dss-log-s2d-extract@dda20000 {
+			reg = <0x0 0xdda20000 0x600000>;
+			no-map;
+		};
+
+		abl@f8800000 {
+			reg = <0x0 0xf8800000 0x1000000>;
+			no-map;
+		};
+
+		dss-log@fd3f0000 {
+			reg = <0x0 0xfd3f0000 0xe000>;
+			no-map;
+		};
+
+		debug-kinfo@fd3fe000 {
+			reg = <0x0 0xfd3fe000 0x1000>;
+			no-map;
+		};
+
+		bldr-log@fd800000 {
+			reg = <0x0 0xfd800000 0x100000>;
+			no-map;
+		};
+
+		abl-log-hist@fd900000 {
+			reg = <0x0 0xfd900000 0x2000>;
+			no-map;
+		};
+
+		pbl-log@fd90a000 {
+			reg = <0x0 0xfd90a000 0x2000>;
+			no-map;
+		};
+
+		bl31-log@fd930000 {
+			reg = <0x0 0xfd930000 0x10000>;
+			no-map;
+		};
+	};
+
+	timer {
+		compatible = "arm,armv8-timer";
+		interrupts =
+		   <GIC_PPI 13 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW) 0>,
+		   <GIC_PPI 14 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW) 0>,
+		   <GIC_PPI 11 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW) 0>,
+		   <GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(8) | IRQ_TYPE_LEVEL_LOW) 0>;
+	};
+
+	gic: interrupt-controller@10400000 {
+		compatible = "arm,gic-v3";
+		#address-cells = <0>;
+		#interrupt-cells = <4>;
+		interrupt-controller;
+		reg = <0x0 0x10400000 0x10000>,		/* GICD */
+		      <0x0 0x10440000 0x200000>;	/* GICR * 8 */
+		interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_HIGH 0>;
+	};
+
+	watchdog_cl0: watchdog@10060000 {
+		compatible = "google,zuma-cl0-wdt";
+		reg = <0x0 0x10060000 0x100>;
+	};
+
+	watchdog_cl1: watchdog@10070000 {
+		compatible = "google,zuma-cl1-wdt";
+		reg = <0x0 0x10070000 0x100>;
+	};
+
+	serial_0: uart@10870000 {
+		compatible = "samsung,exynos-uart";
+		reg = <0x0 0x10870000 0x100>;
+		reg-io-width = <4>;
+		interrupts = <GIC_SPI 641 IRQ_TYPE_LEVEL_HIGH 0>;
+		clocks = <&cmu_peric0 CLK_GOUT_PERIC0_USI0_UART_PCLK>,
+			 <&cmu_peric0 CLK_GOUT_PERIC0_USI0_UART_IPCLK>;
+		clock-names = "uart", "clk_uart_baud0";
+	};
+
+	usi6: usi@108d00c0 {
+		compatible = "google,gs101-usi", "samsung,exynos850-usi";
+		reg = <0x0 0x108d00c0 0x20>;
+		ranges = <0x0 0x0 0x108d0000 0x1000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		clocks = <&cmu_peric0 CLK_GOUT_PERIC0_USI6_USI_PCLK>,
+			 <&cmu_peric0 CLK_GOUT_PERIC0_USI6_USI_IPCLK>;
+		clock-names = "pclk", "ipclk";
+		samsung,sysreg = <&sysreg_peric0 0x14>;
+		status = "disabled";
+
+		hsi2c_6: i2c@0 {
+			compatible = "google,zumapro-hsi2c",
+				     "samsung,exynosautov9-hsi2c";
+			reg = <0x0 0xc0>;
+			interrupts = <GIC_SPI 647 IRQ_TYPE_LEVEL_HIGH 0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			pinctrl-0 = <&hsi2c6_bus>;
+			pinctrl-names = "default";
+			clocks = <&cmu_peric0 CLK_GOUT_PERIC0_USI6_USI_IPCLK>,
+				 <&cmu_peric0 CLK_GOUT_PERIC0_USI6_USI_PCLK>;
+			clock-names = "hsi2c", "hsi2c_pclk";
+			status = "disabled";
+		};
+	};
+
+	usi2_hsi0: usi@111d00c0 {
+		compatible = "google,gs101-usi", "samsung,exynos850-usi";
+		reg = <0x0 0x111d00c0 0x20>;
+		ranges = <0x0 0x0 0x111d0000 0x1000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		clocks = <&cmu_hsi0 CLK_GOUT_HSI0_USI2_PCLK>,
+			 <&cmu_hsi0 CLK_GOUT_HSI0_USI2_IPCLK>;
+		clock-names = "pclk", "ipclk";
+		samsung,sysreg = <&sysreg_hsi0 0x101c>;
+		status = "disabled";
+
+		spi_20: spi@0 {
+			compatible = "google,zumapro-spi";
+			reg = <0x0 0x30>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&cmu_hsi0 CLK_GOUT_HSI0_USI2_PCLK>,
+				 <&cmu_hsi0 CLK_GOUT_HSI0_USI2_IPCLK>;
+			clock-names = "spi", "spi_busclk0";
+			interrupts = <GIC_SPI 408 IRQ_TYPE_LEVEL_HIGH 0>;
+			status = "disabled";
+		};
+	};
+
+	usb32drd: phy@11100000 {
+		compatible = "google,zumapro-usb32drd-phy";
+		reg = <0x0 0x11100000 0x200>;
+		clocks = <&cmu_hsi0 CLK_GOUT_HSI0_USB32DRD_I_USBSUBCTL_APB_PCLK>;
+		clock-names = "phy";
+		#phy-cells = <1>;
+		phys = <&usb_hsphy>;
+		phy-names = "hs";
+		samsung,pmu-syscon = <&pmu_system_controller>;
+		status = "disabled";
+	};
+
+	usb_hsphy: phy@11110000 {
+		compatible = "google,zumapro-eusb2-phy";
+		reg = <0x0 0x11110000 0x200>;
+		clocks = <&cmu_hsi0 CLK_GOUT_HSI0_USB32DRD_I_EUSB_PHY_REFCLK_26>,
+			 <&cmu_hsi0 CLK_GOUT_HSI0_USB32DRD_I_EUSB_CTRL_PCLK>,
+			 <&cmu_hsi0 CLK_GOUT_HSI0_USB32DRD_I_EUSB_APB_CLK>;
+		clock-names = "ref", "bus", "ctrl";
+		#phy-cells = <0>;
+		status = "disabled";
+	};
+
+	usb: usb@11210000 {
+		compatible = "google,zumapro-dwusb3", "samsung,exynos2200-dwusb3";
+		ranges = <0x0 0x0 0x11210000 0x10000>;
+		clocks = <&cmu_hsi0 CLK_GOUT_HSI0_USB32DRD_I_USBLINK_ACLK>;
+		clock-names = "link_aclk";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		status = "disabled";
+
+		usb_dwc3: usb@0 {
+			compatible = "snps,dwc3";
+			reg = <0x0 0x10000>;
+			clocks = <&cmu_hsi0 CLK_GOUT_HSI0_USB32DRD_I_USB32DRD_REF_CLK_40>;
+			clock-names = "ref";
+			interrupts = <GIC_SPI 402 IRQ_TYPE_LEVEL_HIGH 0>;
+			phys = <&usb32drd 0>;
+			phy-names = "usb2-phy";
+			snps,dis-u1-entry-quirk;
+			snps,dis-u2-entry-quirk;
+			snps,dis-u2-freeclk-exists-quirk;
+			snps,has-lpm-erratum;
+			snps,quirk-frame-length-adjustment = <0x20>;
+			snps,usb2-gadget-lpm-disable;
+		};
+	};
+
+	pinctrl_alive: pinctrl@154d0000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x154d0000 0x1000>;
+		status = "disabled";
+
+		wakeup-interrupt-controller {
+			compatible = "google,gs101-wakeup-eint",
+				     "samsung,exynos850-wakeup-eint",
+				     "samsung,exynos7-wakeup-eint";
+		};
+	};
+
+	pinctrl_custom_alive: pinctrl@15060000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x15060000 0x1000>;
+		status = "disabled";
+
+		wakeup-interrupt-controller {
+			compatible = "google,gs101-wakeup-eint",
+				     "samsung,exynos850-wakeup-eint",
+				     "samsung,exynos7-wakeup-eint";
+		};
+	};
+
+	pinctrl_far_alive: pinctrl@154e0000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x154e0000 0x1000>;
+		status = "disabled";
+	};
+
+	pinctrl_gsacore0: pinctrl@16280000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x16280000 0x1000>;
+		status = "disabled";
+	};
+
+	pinctrl_gsacore1: pinctrl@16290000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x16290000 0x1000>;
+		status = "disabled";
+	};
+
+	pinctrl_gsacore2: pinctrl@162a0000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x162a0000 0x1000>;
+		status = "disabled";
+	};
+
+	pinctrl_gsacore3: pinctrl@162b0000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x162b0000 0x1000>;
+		status = "disabled";
+	};
+
+	pinctrl_gsactrl: pinctrl@16140000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x16140000 0x1000>;
+		status = "disabled";
+	};
+
+	pinctrl_hsi1: pinctrl@12040000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x12040000 0x1000>;
+		interrupts = <GIC_SPI 413 IRQ_TYPE_LEVEL_HIGH 0>;
+	};
+
+	pinctrl_hsi2: pinctrl@13040000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x13040000 0x1000>;
+		interrupts = <GIC_SPI 432 IRQ_TYPE_LEVEL_HIGH 0>;
+	};
+
+	pinctrl_hsi2ufs: pinctrl@13060000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x13060000 0x1000>;
+		interrupts = <GIC_SPI 433 IRQ_TYPE_LEVEL_HIGH 0>;
+	};
+
+	pinctrl_peric0: pinctrl@10840000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x10840000 0x1000>;
+		interrupts = <GIC_SPI 634 IRQ_TYPE_LEVEL_HIGH 0>;
+	};
+
+	pinctrl_peric1: pinctrl@10c40000 {
+		compatible = "google,zumapro-pinctrl";
+		reg = <0x0 0x10c40000 0x1000>;
+		interrupts = <GIC_SPI 649 IRQ_TYPE_LEVEL_HIGH 0>;
+	};
+};
+
+#include "zumapro-pinctrl.dtsi"
+#include "zumapro-tmu.dtsi"

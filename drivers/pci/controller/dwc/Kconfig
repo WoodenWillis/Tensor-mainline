@@ -412,6 +412,17 @@ config PCIE_FU740
 	  Say Y here if you want PCIe controller support for the SiFive
 	  FU740.
 
+config PCIE_ZUMAPRO
+	bool "Google Tensor G4 (zumapro) PCIe controller"
+	depends on PCI_MSI
+	depends on ARCH_EXYNOS || COMPILE_TEST
+	depends on OF && HAS_IOMEM
+	select PCIE_DW_HOST
+	help
+	  Say Y here to enable PCIe root-complex support for the HSI2 channel
+	  of the Google Tensor G4 (zumapro) SoC, used for on-board WiFi on the
+	  Pixel 9 family.
+
 config PCIE_UNIPHIER
 	bool "Socionext UniPhier PCIe controller (host mode)"
 	depends on ARCH_UNIPHIER || COMPILE_TEST

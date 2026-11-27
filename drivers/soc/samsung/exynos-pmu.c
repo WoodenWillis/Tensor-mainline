@@ -129,6 +129,9 @@ static const struct of_device_id exynos_pmu_of_device_ids[] = {
 		.compatible = "google,gs101-pmu",
 		.data = &gs101_pmu_data,
 	}, {
+		.compatible = "google,zumapro-pmu",
+		.data = &zumapro_pmu_data,
+	}, {
 		.compatible = "samsung,exynos3250-pmu",
 		.data = exynos_pmu_data_arm_ptr(exynos3250_pmu_data),
 	}, {
@@ -231,6 +234,7 @@ EXPORT_SYMBOL_GPL(exynos_get_pmu_regmap_by_phandle);
  */
 #define CPU_INFORM_CLEAR	0
 #define CPU_INFORM_C2		1
+#define PMU_INFORM0_ALLOWED_C2	1
 
 /*
  * __gs101_cpu_pmu_ prefix functions are common code shared by CPU PM notifiers
@@ -246,6 +250,9 @@ static int __gs101_cpu_pmu_online(unsigned int cpu)
 	/* clear cpu inform hint */
 	regmap_write(pmu_context->pmureg, GS101_CPU_INFORM(cpuhint),
 		     CPU_INFORM_CLEAR);
+
+	if (!pmu_context->pmuintrgen)
+		return 0;
 
 	mask = BIT(cpu);
 
@@ -307,6 +314,9 @@ static int __gs101_cpu_pmu_offline(unsigned int cpu)
 	/* set cpu inform hint */
 	regmap_write(pmu_context->pmureg, GS101_CPU_INFORM(cpuhint),
 		     CPU_INFORM_C2);
+
+	if (!pmu_context->pmuintrgen)
+		return 0;
 
 	mask = BIT(cpu);
 	regmap_update_bits(pmu_context->pmuintrgen, GS101_GRP2_INTR_BID_ENABLE,
@@ -412,13 +422,13 @@ static struct notifier_block exynos_cpupm_reboot_nb = {
 	.notifier_call = exynos_cpupm_reboot_notifier,
 };
 
-static int setup_cpuhp_and_cpuidle(struct device *dev)
+static int setup_pmu_intr_gen(struct device *dev)
 {
 	struct device_node *intr_gen_node __free(device_node) =
 		of_parse_phandle(dev->of_node, "google,pmu-intr-gen-syscon", 0);
 	struct resource intrgen_res;
 	void __iomem *virt_addr;
-	int ret, cpu;
+	int ret;
 
 	if (!intr_gen_node) {
 		/*
@@ -426,7 +436,7 @@ static int setup_cpuhp_and_cpuidle(struct device *dev)
 		 * phandle just issue a warning rather than fail to probe.
 		 */
 		dev_warn(dev, "pmu-intr-gen syscon unavailable\n");
-		return 0;
+		return -ENODEV;
 	}
 
 	/*
@@ -435,6 +445,9 @@ static int setup_cpuhp_and_cpuidle(struct device *dev)
 	 * syscon provided regmap.
 	 */
 	ret = of_address_to_resource(intr_gen_node, 0, &intrgen_res);
+	if (ret)
+		return ret;
+
 	virt_addr = devm_ioremap(dev, intrgen_res.start,
 				 resource_size(&intrgen_res));
 	if (!virt_addr)
@@ -448,10 +461,21 @@ static int setup_cpuhp_and_cpuidle(struct device *dev)
 	}
 
 	/* register custom mmio regmap with syscon */
-	ret = of_syscon_register_regmap(intr_gen_node,
-					pmu_context->pmuintrgen);
-	if (ret)
-		return ret;
+	return of_syscon_register_regmap(intr_gen_node,
+					 pmu_context->pmuintrgen);
+}
+
+static int setup_cpuhp_and_cpuidle(struct device *dev)
+{
+	int ret, cpu;
+
+	if (!pmu_context->pmu_data->no_pmu_intr_gen) {
+		ret = setup_pmu_intr_gen(dev);
+		if (ret == -ENODEV)
+			return 0;
+		if (ret)
+			return ret;
+	}
 
 	pmu_context->in_cpuhp = devm_bitmap_zalloc(dev, num_possible_cpus(),
 						   GFP_KERNEL);
@@ -479,6 +503,9 @@ static int setup_cpuhp_and_cpuidle(struct device *dev)
 		goto clean_cpuhp_state_prepare;
 
 	pmu_context->cpuhp_online_state = ret;
+
+	if (pmu_context->pmu_data->inform0_allows_c2)
+		regmap_write(pmu_context->pmureg, GS101_INFORM0, PMU_INFORM0_ALLOWED_C2);
 
 	/* register CPU PM notifiers for cpuidle */
 	ret = cpu_pm_register_notifier(&gs101_cpu_pm_notifier);
@@ -512,6 +539,15 @@ static void destroy_cpuhp_and_cpuidle(void)
 		cpuhp_remove_state(pmu_context->cpuhp_prepare_state);
 	if (pmu_context->cpuhp_online_state != CPUHP_INVALID)
 		cpuhp_remove_state(pmu_context->cpuhp_online_state);
+}
+
+static int exynos_pmu_add_clkout(struct device *dev)
+{
+	if (pmu_context->pmu_data && pmu_context->pmu_data->pmu_secure)
+		return 0;
+
+	return devm_mfd_add_devices(dev, PLATFORM_DEVID_NONE, exynos_pmu_devs,
+				    ARRAY_SIZE(exynos_pmu_devs), NULL, 0, NULL);
 }
 
 static int exynos_pmu_probe(struct platform_device *pdev)
