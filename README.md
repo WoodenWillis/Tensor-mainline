@@ -8,12 +8,6 @@ This is a hobby port on top of upstream Linux (currently based on **v7.4-rc3**).
 
 Flashing custom kernels can leave your phone unbootable until you reflash a stock image. You do this at your own risk.
 
-## Branches
-
-| Branch | What it is |
-|---|---|
-| `Sovereign` | The main development branch. Everything below refers to this branch. |
-
 ## Hardware status
 
 | Area | Status | Notes |
