@@ -1,168 +1,98 @@
-Linux kernel
-============
+# Tensor-mainline: Pixel 9 Pro on mainline Linux
 
-The Linux kernel is the core of any Linux operating system. It manages hardware,
-system resources, and provides the fundamental services for all other software.
+Mainline Linux kernel bring-up for the **Google Pixel 9 Pro ("caiman")**, built on the **Tensor G4 ("zumapro")** SoC.
 
-Quick Start
------------
+This is a hobby port on top of upstream Linux (currently based on **v7.4-rc3**). The goal is a phone that boots a normal Linux userland with display, touch, storage, USB and WiFi, using upstream drivers where they exist and small, upstreamable drivers where they don't. If it goes well, parts of it may be sent upstream.
 
-* Report a bug: See Documentation/admin-guide/reporting-issues.rst
-* Get the latest kernel: https://kernel.org
-* Build the kernel: See Documentation/admin-guide/quickly-build-trimmed-linux.rst
-* Join the community: https://lore.kernel.org/
+> **Status: experimental.** Expect rough edges, debug knobs and things that change from week to week. Flashing custom kernels can leave your phone unbootable until you reflash a stock image. You do this at your own risk.
 
-Essential Documentation
------------------------
+## Branches
 
-All users should be familiar with:
+| Branch | What it is |
+|---|---|
+| `Sovereign` | The main development branch. Everything below refers to this branch. |
 
-* Building requirements: Documentation/process/changes.rst
-* Code of Conduct: Documentation/process/code-of-conduct.rst
-* License: See COPYING
+## Hardware status
 
-Documentation can be built with make htmldocs or viewed online at:
-https://www.kernel.org/doc/html/latest/
+| Area | Status | Notes |
+|---|---|---|
+| Boot, CPUs, UART console | ✅ Working | Serial console at 921600 baud |
+| Clocks (CMU) | ⏱ Working | TOP, MISC, PERIC0, HSI0, HSI2 and G3D controllers |
+| Pin control, GPIO keys | 📍 Working | Power and volume keys |
+| PMICs (S2MPG14/S2MPG15) | ⚡️ Working | Probed over ACPM. Regulators and the RTC work |
+| CPU frequency scaling | 🎛 Working | ACPM DVFS |
+| Thermal | 🌡 Working | TMU zones for CPU and GPU |
+| UFS storage | 💾 Working | |
+| Display | 📱 Working | zumapro_decon |
+| GPU (Mali-G715) | 🟡 Probes | Panthor|
+| Touchscreen (Synaptics S3908) | 👇 Working | TouchComm SPI driver |
+| USB | 📲 Working | Peripheral mode only, with USB gadget networking |
+| Battery fuel gauge (MAX77779) | 🔋 Working | Read only |
+| PCIe | 🚄 Working | A new Tensor G4 root complex driver. Runtime suspend and link-down recovery are not done yet |
+| WiFi (BCM4390) | 🛜 Working | Uses Broadcom's out-of-tree `bcmdhd` driver. Supports monitor mode. |
+| Modem, audio, cameras, charging, Bluetooth, NFC | ❌ Not started | |
 
+## Building
 
-Who Are You?
-============
+You need an aarch64 cross toolchain, either GCC or LLVM.
 
-Find your role below:
+```sh
+git clone -b Sovereign https://github.com/WoodenWillis/Tensor-mainline.git
+cd Tensor-mainline
 
-* New Kernel Developer: Getting started with kernel development
-* Academic Researcher: Studying kernel internals and architecture
-* Security Expert: Hardening and vulnerability analysis
-* Backport/Maintenance Engineer: Maintaining stable kernels
-* System Administrator: Configuring and troubleshooting
-* Maintainer: Leading subsystems and reviewing patches
-* Hardware Vendor: Writing drivers for new hardware
-* Distribution Maintainer: Packaging kernels for distros
-* AI Coding Assistant: LLMs and AI-powered development tools
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- caiman_defconfig
+make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j"$(nproc)" Image dtbs
+```
 
+This produces:
 
-For Specific Users
-==================
+- `arch/arm64/boot/Image`
+- `arch/arm64/boot/dts/exynos/google/caiman.dtb`
 
-New Kernel Developer
---------------------
+The defconfig embeds an initramfs. Point `CONFIG_INITRAMFS_SOURCE` at your own initramfs directory or list before you build.
 
-Welcome! Start your kernel development journey here:
+### WiFi
 
-* Getting Started: Documentation/process/development-process.rst
-* Your First Patch: Documentation/process/submitting-patches.rst
-* Coding Style: Documentation/process/coding-style.rst
-* Build System: Documentation/kbuild/index.rst
-* Development Tools: Documentation/dev-tools/index.rst
-* Kernel Hacking Guide: Documentation/kernel-hacking/hacking.rst
-* Core APIs: Documentation/core-api/index.rst
+There is no mainline driver for the BCM4390, so the port carries Broadcom's FullMAC DHD driver as an out-of-tree module in `tools/caiman/bcmdhd/`. Its history is in two commits:
 
-Academic Researcher
--------------------
+1. A pristine import of `google-modules/wlan/bcm4398` from the caiman vendor tree (DHD 103.101.26.24).
+2. The mainline port on top. This covers cfg80211 API drift, no-op hooks in place of the vendor PCIe RC, MSI on by default, the BCM4390 b1 chip tables, and a fix for duplicate cipher suites.
 
-Explore the kernel's architecture and internals:
+Keeping the import untouched means the port reads as a plain diff against what Google ships.
 
-* Researcher Guidelines: Documentation/process/researcher-guidelines.rst
-* Memory Management: Documentation/mm/index.rst
-* Scheduler: Documentation/scheduler/index.rst
-* Networking Stack: Documentation/networking/index.rst
-* Filesystems: Documentation/filesystems/index.rst
-* RCU (Read-Copy Update): Documentation/RCU/index.rst
-* Locking Primitives: Documentation/locking/index.rst
-* Power Management: Documentation/power/index.rst
+Build it against the same kernel tree that runs on the phone:
 
-Security Expert
----------------
+```sh
+make -C tools/caiman/bcmdhd KERNEL_SRC="$PWD" ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
+```
 
-Security documentation and hardening guides:
+The kernel is built without `MODVERSIONS`, so rebuild the module after any kernel config change. The driver also needs the BCM4390 firmware and NVRAM files from the stock Pixel image. They aren't included here.
 
-* Security Documentation: Documentation/security/index.rst
-* LSM Development: Documentation/security/lsm-development.rst
-* Self Protection: Documentation/security/self-protection.rst
-* Reporting Vulnerabilities: Documentation/process/security-bugs.rst
-* CVE Procedures: Documentation/process/cve.rst
-* Embargoed Hardware Issues: Documentation/process/embargoed-hardware-issues.rst
-* Security Features: Documentation/userspace-api/seccomp_filter.rst
+## Layout
 
-Backport/Maintenance Engineer
------------------------------
+New code :
 
-Maintain and stabilize kernel versions:
+- Device tree: `arch/arm64/boot/dts/exynos/google/` (`zumapro.dtsi`, `zumapro-pinctrl.dtsi`, `zumapro-tmu.dtsi`, `caiman.dts`)
+- Defconfig: `arch/arm64/configs/caiman_defconfig`
+- Clocks: `drivers/clk/samsung/clk-zumapro.c`
+- Display: `drivers/gpu/drm/sysfb/zumapro_decon.c`
+- Touchscreen: `drivers/input/touchscreen/synaptics_tcm.c`
+- PCIe: `drivers/pci/controller/dwc/pcie-zumapro.c`
+- UFS PHY: `drivers/phy/samsung/phy-zumapro-ufs.c`
+- GPU DVFS domain: `drivers/pmdomain/samsung/zumapro-gpu-dvfs.c`
+- Fuel gauge: `drivers/power/supply/max77779_fg.c`
+- Thermal: `drivers/thermal/samsung/acpm-tmu.c`
+- WiFi (out-of-tree module): `tools/caiman/bcmdhd/`
 
-* Stable Kernel Rules: Documentation/process/stable-kernel-rules.rst
-* Backporting Guide: Documentation/process/backporting.rst
-* Applying Patches: Documentation/process/applying-patches.rst
-* Subsystem Profile: Documentation/maintainer/maintainer-entry-profile.rst
-* Git for Maintainers: Documentation/maintainer/configure-git.rst
+Device tree bindings for all of the above are in `Documentation/devicetree/bindings/`.
 
-System Administrator
---------------------
+## Credits
 
-Configure, tune, and troubleshoot Linux systems:
+- The upstream Linux community, and especially the people behind the **Google Tensor GS101 (Pixel 6)** mainline work. A lot of this port builds directly on that.
+- **Tudor Ambarus (Linaro)** for the GS101 ACPM TMU thermal driver this port carries and extends.
+- **Broadcom and Google** for the `bcmdhd` WiFi driver, which is GPL-2.0 licensed and carried here with its original notices.
+- Samsung and Google, whose GPL-licensed downstream sources helped with register layouts. Their copyright notices are kept in the files that derive from them.
 
-* Admin Guide: Documentation/admin-guide/index.rst
-* Kernel Parameters: Documentation/admin-guide/kernel-parameters.rst
-* Sysctl Tuning: Documentation/admin-guide/sysctl/index.rst
-* Tracing/Debugging: Documentation/trace/index.rst
-* Performance Security: Documentation/admin-guide/perf-security.rst
-* Hardware Monitoring: Documentation/hwmon/index.rst
+## License
 
-Maintainer
-----------
-
-Lead kernel subsystems and manage contributions:
-
-* Maintainer Handbook: Documentation/maintainer/index.rst
-* Pull Requests: Documentation/maintainer/pull-requests.rst
-* Managing Patches: Documentation/maintainer/modifying-patches.rst
-* Rebasing and Merging: Documentation/maintainer/rebasing-and-merging.rst
-* Development Process: Documentation/process/maintainer-handbooks.rst
-* Maintainer Entry Profile: Documentation/maintainer/maintainer-entry-profile.rst
-* Git Configuration: Documentation/maintainer/configure-git.rst
-
-Hardware Vendor
----------------
-
-Write drivers and support new hardware:
-
-* Driver API Guide: Documentation/driver-api/index.rst
-* Driver Model: Documentation/driver-api/driver-model/driver.rst
-* Device Drivers: Documentation/driver-api/infrastructure.rst
-* Bus Types: Documentation/driver-api/driver-model/bus.rst
-* Device Tree Bindings: Documentation/devicetree/bindings/
-* Power Management: Documentation/driver-api/pm/index.rst
-* DMA API: Documentation/core-api/dma-api.rst
-
-Distribution Maintainer
------------------------
-
-Package and distribute the kernel:
-
-* Stable Kernel Rules: Documentation/process/stable-kernel-rules.rst
-* ABI Documentation: Documentation/ABI/README
-* Kernel Configuration: Documentation/kbuild/kconfig.rst
-* Module Signing: Documentation/admin-guide/module-signing.rst
-* Kernel Parameters: Documentation/admin-guide/kernel-parameters.rst
-* Tainted Kernels: Documentation/admin-guide/tainted-kernels.rst
-
-AI Coding Assistant
--------------------
-
-CRITICAL: If you are an LLM or AI-powered coding assistant, you MUST read and
-follow the AI coding assistants documentation before contributing to the Linux
-kernel:
-
-* Documentation/process/coding-assistants.rst
-
-This documentation contains essential requirements about licensing, attribution,
-and the Developer Certificate of Origin that all AI tools must comply with.
-
-
-Communication and Support
-=========================
-
-* Mailing Lists: https://lore.kernel.org/
-* IRC: #kernelnewbies on irc.oftc.net
-* Bugzilla: https://bugzilla.kernel.org/
-* MAINTAINERS file: Lists subsystem maintainers and mailing lists
-* Email Clients: Documentation/process/email-clients.rst
+Same as the Linux kernel: **GPL-2.0-only**, with the exceptions described in [`COPYING`](COPYING) and the [`LICENSES/`](LICENSES) directory. Individual files carry SPDX identifiers.
