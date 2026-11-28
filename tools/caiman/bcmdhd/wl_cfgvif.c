@@ -5959,7 +5959,11 @@ wl_notify_connect_status_ap(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 		sinfo.assoc_req_ies_len = len;
 		WL_INFORM_MEM(("[%s] new sta event for "MACDBG "\n",
 			ndev->name, MAC2STRDBG(e->addr.octet)));
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0))
+		cfg80211_new_sta(ndev->ieee80211_ptr, e->addr.octet, &sinfo, GFP_ATOMIC);
+#else
 		cfg80211_new_sta(ndev, e->addr.octet, &sinfo, GFP_ATOMIC);
+#endif
 #ifdef WL_WPS_SYNC
 		wl_wps_session_update(ndev, WPS_STATE_LINKUP, e->addr.octet);
 #endif /* WL_WPS_SYNC */
@@ -5978,7 +5982,11 @@ wl_notify_connect_status_ap(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 
 		WL_INFORM_MEM(("[%s] del sta event for "MACDBG "\n",
 			ndev->name, MAC2STRDBG(e->addr.octet)));
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0))
+		cfg80211_del_sta(ndev->ieee80211_ptr, e->addr.octet, GFP_ATOMIC);
+#else
 		cfg80211_del_sta(ndev, e->addr.octet, GFP_ATOMIC);
+#endif
 #ifdef WL_WPS_SYNC
 		wl_wps_session_update(ndev, WPS_STATE_LINKDOWN, e->addr.octet);
 #endif /* WL_WPS_SYNC */
@@ -6730,7 +6738,8 @@ wl_cfg80211_ch_switch_notify(struct net_device *dev, uint16 chanspec,
 	}
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 8, 0))
 	freq = chandef.chan ? chandef.chan->center_freq : chandef.center_freq1;
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)) || defined(WL_CH_SWITCH_BKPORT)
+#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)) && \
+	(LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0))) || defined(WL_CH_SWITCH_BKPORT)
 	/* FIXME: need to consider puncturing bitmap */
 	cfg80211_ch_switch_notify(dev, &chandef, link_id, 0);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 2)) || defined(WL_MLO_BKPORT)

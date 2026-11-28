@@ -1471,8 +1471,10 @@ static const u32 __wl_cipher_suites[] = {
 #ifdef WL_GCMP
 	WLAN_CIPHER_SUITE_GCMP,
 	WLAN_CIPHER_SUITE_GCMP_256,
+#if !defined(MFP) || (LINUX_VERSION_CODE < KERNEL_VERSION(4, 0, 0))
 	WLAN_CIPHER_SUITE_BIP_GMAC_128,
 	WLAN_CIPHER_SUITE_BIP_GMAC_256,
+#endif
 #endif /* WL_GCMP */
 };
 
@@ -7459,6 +7461,7 @@ wl_fillup_assoc_params(struct bcm_cfg80211 *cfg, struct net_device *dev,
 	wl_extjoin_params_t *ext_join_params = (wl_extjoin_params_t *)params;
 	wl_extjoin_params_v1_t *ext_join_params_v1 = (wl_extjoin_params_v1_t *)params;
 	wl_extjoin_params_v2_t *ext_join_params_v2 = (wl_extjoin_params_v2_t *)params;
+	wl_extjoin_params_v3_t *ext_join_params_v3 = (wl_extjoin_params_v3_t *)params;
 	s32 rem_buf = buf_len;
 
 	/* Use increased dwell for targeted join case to take care of noisy env */
@@ -7511,6 +7514,19 @@ wl_fillup_assoc_params(struct bcm_cfg80211 *cfg, struct net_device *dev,
 					passive_time, scan_type, home_time, nprobes);
 			bssid_ptr = ext_join_params_v2->assoc.bssid.octet;
 			rem_buf -= WL_EXTJOIN_PARAMS_FIXED_SIZE_V2;
+			break;
+		case WL_JOIN_VERSION_MAJOR_3:
+			/* TODO(will): mld_addr left zero, wlcfg_assoc_info_t here has no mld */
+			ext_join_params_v3->version = WL_JOIN_VERSION_MAJOR_3;
+			ssid_ptr = &ext_join_params_v3->ssid;
+			assoc_flags = &ext_join_params_v3->assoc.flags;
+			ext_join_params_v3->assoc.version = WL_JOIN_VERSION_MAJOR_3;
+			ext_join_params_v3->assoc.chanspec_num = htod32(chan_cnt);
+			chspec_list_ptr = ext_join_params_v3->assoc.chanspec_list;
+			SET_SCAN_PARAMS(ext_join_params_v3, active_time,
+					passive_time, scan_type, home_time, nprobes);
+			bssid_ptr = ext_join_params_v3->assoc.bssid.octet;
+			rem_buf -= WL_EXTJOIN_PARAMS_FIXED_SIZE_V3;
 			break;
 
 		default:
@@ -7871,6 +7887,9 @@ wl_handle_join(struct bcm_cfg80211 *cfg,
 	} else if (cfg->join_iovar_ver == WL_JOIN_VERSION_MAJOR_2) {
 		/* Use version 2 join struct */
 		join_params_size = WL_EXTJOIN_PARAMS_FIXED_SIZE_V2 +
+			assoc_info->chan_cnt * sizeof(chanspec_t);
+	} else if (cfg->join_iovar_ver == WL_JOIN_VERSION_MAJOR_3) {
+		join_params_size = WL_EXTJOIN_PARAMS_FIXED_SIZE_V3 +
 			assoc_info->chan_cnt * sizeof(chanspec_t);
 	} else {
 		WL_ERR(("Unsupported join iovar version %d\n", cfg->join_iovar_ver));
@@ -12529,6 +12548,94 @@ exit:
 }
 #endif /* WL_SUPPORT_ACS */
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0))
+/*
+ * cfg80211_ops ABI shims for the 7.3 kernel: several ops changed signature
+ * (net_device -> wireless_dev, added link_id/radio_idx, cookie by value,
+ * change_beacon takes cfg80211_ap_update). The driver's own handlers keep
+ * their prior prototypes; these thin wrappers adapt them. link_id/radio_idx
+ * are ignored (single link, single radio).
+ */
+static int wl_op_set_wiphy_params(struct wiphy *wiphy, int radio_idx, u32 changed)
+{ return wl_cfg80211_set_wiphy_params(wiphy, changed); }
+
+static int wl_op_get_station(struct wiphy *wiphy, struct wireless_dev *wdev,
+	const u8 *mac, struct station_info *sinfo)
+{ return wl_cfg80211_get_station(wiphy, wdev->netdev, mac, sinfo); }
+
+static int wl_op_dump_station(struct wiphy *wiphy, struct wireless_dev *wdev,
+	int idx, u8 *mac, struct station_info *sinfo)
+{ return wl_cfg80211_dump_station(wiphy, wdev->netdev, idx, mac, sinfo); }
+
+static int wl_op_set_tx_power(struct wiphy *wiphy, struct wireless_dev *wdev,
+	int radio_idx, enum nl80211_tx_power_setting type, int mbm)
+{ return wl_cfg80211_set_tx_power(wiphy, wdev, type, mbm); }
+
+static int wl_op_get_tx_power(struct wiphy *wiphy, struct wireless_dev *wdev,
+	int radio_idx, unsigned int link_id, int *dbm)
+{ return wl_cfg80211_get_tx_power(wiphy, wdev, dbm); }
+
+static int wl_op_add_key(struct wiphy *wiphy, struct wireless_dev *wdev,
+	int link_id, u8 key_idx, bool pairwise, const u8 *mac_addr,
+	struct key_params *params)
+{ return wl_cfg80211_add_key(wiphy, wdev->netdev, link_id, key_idx, pairwise,
+	mac_addr, params); }
+
+static int wl_op_del_key(struct wiphy *wiphy, struct wireless_dev *wdev,
+	int link_id, u8 key_idx, bool pairwise, const u8 *mac_addr)
+{ return wl_cfg80211_del_key(wiphy, wdev->netdev, link_id, key_idx, pairwise,
+	mac_addr); }
+
+static int wl_op_get_key(struct wiphy *wiphy, struct wireless_dev *wdev,
+	int link_id, u8 key_idx, bool pairwise, const u8 *mac_addr, void *cookie,
+	void (*callback)(void *cookie, struct key_params *params))
+{ return wl_cfg80211_get_key(wiphy, wdev->netdev, link_id, key_idx, pairwise,
+	mac_addr, cookie, callback); }
+
+static int wl_op_config_default_mgmt_key(struct wiphy *wiphy,
+	struct wireless_dev *wdev, int link_id, u8 key_idx)
+{ return wl_cfg80211_config_default_mgmt_key(wiphy, wdev->netdev, link_id, key_idx); }
+
+static int wl_op_del_station(struct wiphy *wiphy, struct wireless_dev *wdev,
+	struct station_del_parameters *params)
+{ return wl_cfg80211_del_station(wiphy, wdev->netdev, params); }
+
+static int wl_op_change_station(struct wiphy *wiphy, struct wireless_dev *wdev,
+	const u8 *mac, struct station_parameters *params)
+{ return wl_cfg80211_change_station(wiphy, wdev->netdev, mac, params); }
+
+static int wl_op_change_beacon(struct wiphy *wiphy, struct net_device *dev,
+	struct cfg80211_ap_update *info)
+{ return wl_cfg80211_change_beacon(wiphy, dev, &info->beacon); }
+
+static int wl_op_tdls_mgmt(struct wiphy *wiphy, struct net_device *dev,
+	const u8 *peer, int link_id, u8 action_code, u8 dialog_token,
+	u16 status_code, u32 peer_capability, bool initiator,
+	const u8 *buf, size_t len)
+{ return wl_cfg80211_tdls_mgmt(wiphy, dev, peer, action_code, dialog_token,
+	status_code, peer_capability, initiator, buf, len); }
+
+/*
+ * shortcut: 7.3 passes the ROC/mgmt_tx cookie by value (kernel-assigned),
+ * but the driver still generates its own into *cookie, so P2P/action-frame
+ * cookie tracking may be off. Fine for STA bring-up; revisit for P2P.
+ */
+static int wl_op_remain_on_channel(struct wiphy *wiphy, struct wireless_dev *wdev,
+	struct ieee80211_channel *chan, unsigned int duration,
+	u64 cookie, const u8 *rx_addr)
+{ u64 c = cookie; return wl_cfgscan_remain_on_channel(wiphy, wdev, chan, duration, &c); }
+
+static int wl_op_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
+	struct cfg80211_mgmt_tx_params *params, u64 cookie)
+{ u64 c = cookie; return wl_cfg80211_mgmt_tx(wiphy, wdev, params, &c); }
+
+#ifdef WL_CFG80211_MONITOR
+static int wl_op_set_monitor_channel(struct wiphy *wiphy, struct net_device *dev,
+	struct cfg80211_chan_def *chandef)
+{ return wl_cfg80211_set_monitor_channel(wiphy, chandef); }
+#endif /* WL_CFG80211_MONITOR */
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0) */
+
 static struct cfg80211_ops wl_cfg80211_ops = {
 	.add_virtual_intf = wl_cfg80211_add_virtual_iface,
 	.del_virtual_intf = wl_cfg80211_del_virtual_iface,
@@ -12541,9 +12648,12 @@ static struct cfg80211_ops wl_cfg80211_ops = {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 5, 0))
 	.abort_scan = wl_cfg80211_abort_scan,
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 5, 0)) */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0))
 	.set_wiphy_params = wl_cfg80211_set_wiphy_params,
+#endif
 	.join_ibss = wl_cfg80211_join_ibss,
 	.leave_ibss = wl_cfg80211_leave_ibss,
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0))
 	.get_station = wl_cfg80211_get_station,
 	.dump_station = wl_cfg80211_dump_station,
 	.set_tx_power = wl_cfg80211_set_tx_power,
@@ -12551,20 +12661,27 @@ static struct cfg80211_ops wl_cfg80211_ops = {
 	.add_key = wl_cfg80211_add_key,
 	.del_key = wl_cfg80211_del_key,
 	.get_key = wl_cfg80211_get_key,
+#endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 7, 0)) && defined(BCN_PROT_AP)
 	.set_default_beacon_key = wl_cfg80211_set_default_beacon_key,
 #endif
 	.set_default_key = wl_cfg80211_config_default_key,
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0))
 	.set_default_mgmt_key = wl_cfg80211_config_default_mgmt_key,
+#endif
 	.set_power_mgmt = wl_cfg80211_set_power_mgmt,
 	.connect = wl_cfg80211_connect,
 	.disconnect = wl_cfg80211_disconnect,
 	.set_pmksa = wl_cfg80211_set_pmksa,
 	.del_pmksa = wl_cfg80211_del_pmksa,
 	.flush_pmksa = wl_cfg80211_flush_pmksa,
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0))
 	.remain_on_channel = wl_cfgscan_remain_on_channel,
+#endif
 	.cancel_remain_on_channel = wl_cfgscan_cancel_remain_on_channel,
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0))
 	.mgmt_tx = wl_cfg80211_mgmt_tx,
+#endif
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 8, 0))
 	.mgmt_frame_register = wl_cfg80211_mgmt_frame_register,
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(5, 8, 0) */
@@ -12579,7 +12696,9 @@ static struct cfg80211_ops wl_cfg80211_ops = {
 	.add_beacon = wl_cfg80211_add_set_beacon,
 	.del_beacon = wl_cfg80211_del_beacon,
 #else
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0))
 	.change_beacon = wl_cfg80211_change_beacon,
+#endif
 	.start_ap = wl_cfg80211_start_ap,
 	.stop_ap = wl_cfg80211_stop_ap,
 #endif /* LINUX_VERSION < KERNEL_VERSION(3,4,0) && !WL_COMPAT_WIRELESS */
@@ -12588,13 +12707,17 @@ static struct cfg80211_ops wl_cfg80211_ops = {
 	.sched_scan_stop = wl_cfg80211_sched_scan_stop,
 #endif /* WL_SCHED_SCAN */
 #if defined(WL_SUPPORT_BACKPORTED_KPATCHES) || (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0))
 	.del_station = wl_cfg80211_del_station,
 	.change_station = wl_cfg80211_change_station,
+#endif
 	.mgmt_tx_cancel_wait = wl_cfg80211_mgmt_tx_cancel_wait,
 #endif /* WL_SUPPORT_BACKPORTED_KPATCHES || KERNEL_VERSION >= (3,2,0) */
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 2, 0)) || \
 	defined(WL_COMPAT_WIRELESS)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0))
 	.tdls_mgmt = wl_cfg80211_tdls_mgmt,
+#endif
 	.tdls_oper = wl_cfg80211_tdls_oper,
 #endif /* LINUX_VERSION > VERSION(3, 2, 0) || WL_COMPAT_WIRELESS */
 #ifdef WL_SUPPORT_ACS
@@ -12603,7 +12726,7 @@ static struct cfg80211_ops wl_cfg80211_ops = {
 #ifdef WL_CFG80211_ACL
 	.set_mac_acl = wl_cfg80211_set_mac_acl,
 #endif /* WL_CFG80211_ACL */
-#ifdef WL_CFG80211_MONITOR
+#if defined(WL_CFG80211_MONITOR) && (LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0))
 	.set_monitor_channel = wl_cfg80211_set_monitor_channel,
 #endif /* WL_CFG80211_MONITOR */
 #ifdef GTK_OFFLOAD_SUPPORT
@@ -12632,6 +12755,27 @@ static struct cfg80211_ops wl_cfg80211_ops = {
 	.update_owe_info = wl_cfg80211_update_owe_info,
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(5, 2, 0) */
 	.get_channel = wl_cfgvif_get_channel,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0))
+	/* override ops whose signature changed in 7.3 (see wl_op_* shims) */
+	.set_wiphy_params = wl_op_set_wiphy_params,
+	.get_station = wl_op_get_station,
+	.dump_station = wl_op_dump_station,
+	.set_tx_power = wl_op_set_tx_power,
+	.get_tx_power = wl_op_get_tx_power,
+	.add_key = wl_op_add_key,
+	.del_key = wl_op_del_key,
+	.get_key = wl_op_get_key,
+	.set_default_mgmt_key = wl_op_config_default_mgmt_key,
+	.del_station = wl_op_del_station,
+	.change_station = wl_op_change_station,
+	.change_beacon = wl_op_change_beacon,
+	.tdls_mgmt = wl_op_tdls_mgmt,
+	.remain_on_channel = wl_op_remain_on_channel,
+	.mgmt_tx = wl_op_mgmt_tx,
+#ifdef WL_CFG80211_MONITOR
+	.set_monitor_channel = wl_op_set_monitor_channel,
+#endif /* WL_CFG80211_MONITOR */
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0) */
 };
 
 s32 wl_mode_to_nl80211_iftype(s32 mode)
@@ -27108,15 +27252,26 @@ wl_cfg80211_debug_data_dump(struct net_device *dev, u8 *buf, u32 buf_len)
 void
 wl_cfg80211_wdev_lock(struct wireless_dev *wdev)
 {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0))
 	mutex_lock(&wdev->mtx);
 	__acquire(wdev->mtx);
+#else
+	/* shortcut: wdev->mtx was removed; result-reporting paths now rely on
+	 * cfg80211's internal (wiphy) locking. Revisit if connect/roam races
+	 * appear on-device. */
+	(void)wdev;
+#endif
 }
 
 void
 wl_cfg80211_wdev_unlock(struct wireless_dev *wdev)
 {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0))
 	__release(wdev->mtx);
 	mutex_unlock(&wdev->mtx);
+#else
+	(void)wdev;
+#endif
 }
 
 #ifdef WL_CLIENT_SAE

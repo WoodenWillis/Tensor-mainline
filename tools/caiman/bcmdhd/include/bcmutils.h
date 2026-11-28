@@ -27,6 +27,10 @@
 #include <bcmtlv.h>
 #include <bcmerror.h>
 
+#ifdef __KERNEL__
+#include <linux/string.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

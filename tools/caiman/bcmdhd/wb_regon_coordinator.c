@@ -543,7 +543,11 @@ wbrc_init(void)
 		goto err_register;
 	}
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0))
+	wbrc_data->wbrc_bt_dev_class = class_create(CLASS_NAME);
+#else
 	wbrc_data->wbrc_bt_dev_class = class_create(THIS_MODULE, CLASS_NAME);
+#endif
 	err = PTR_ERR(wbrc_data->wbrc_bt_dev_class);
 	if (IS_ERR(wbrc_data->wbrc_bt_dev_class)) {
 		pr_alert("Failed to register device class\n");
@@ -933,6 +937,9 @@ wl2wbrc_wlan_before_regoff(void)
 	struct wbrc_pvt_data *wbrc_data = g_wbrc_data;
 	int tmo_ret = 0;
 
+	if (!wbrc_data)
+		return;
+
 	if (WBRC_CHKCHIP(wbrc_data->chipid)) {
 		return;
 	}
@@ -961,6 +968,9 @@ wl2wbrc_wlan_after_regoff(void)
 {
 	struct wbrc_pvt_data *wbrc_data = g_wbrc_data;
 
+	if (!wbrc_data)
+		return;
+
 	if (WBRC_CHKCHIP(wbrc_data->chipid)) {
 		return;
 	}
@@ -979,6 +989,9 @@ wl2wbrc_wlan_before_regon(void)
 	struct wbrc_pvt_data *wbrc_data = g_wbrc_data;
 	int tmo_ret = 0;
 	unsigned long long curts = 0;
+
+	if (!wbrc_data)
+		return;
 
 	if (WBRC_CHKCHIP(wbrc_data->chipid)) {
 		return;
@@ -1041,6 +1054,9 @@ void
 wl2wbrc_wlan_after_regon(void)
 {
 	struct wbrc_pvt_data *wbrc_data = g_wbrc_data;
+
+	if (!wbrc_data)
+		return;
 
 	if (WBRC_CHKCHIP(wbrc_data->chipid)) {
 		return;

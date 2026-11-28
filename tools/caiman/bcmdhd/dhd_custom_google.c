@@ -30,7 +30,26 @@
 #include <linux/skbuff.h>
 #include <linux/fcntl.h>
 #include <linux/fs.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0))
+#include <linux/of.h>
+#include <linux/gpio/consumer.h>
+static inline int of_get_named_gpio(const struct device_node *np,
+	const char *propname, int index)
+{
+	struct gpio_desc *desc;
+	int gpio;
+
+	desc = fwnode_gpiod_get_index(of_fwnode_handle(np), propname, index,
+		GPIOD_ASIS, propname);
+	if (IS_ERR(desc))
+		return PTR_ERR(desc);
+	gpio = desc_to_gpio(desc);
+	gpiod_put(desc);
+	return gpio;
+}
+#else
 #include <linux/of_gpio.h>
+#endif
 #ifdef CONFIG_WIFI_CONTROL_FUNC
 #include <linux/wlan_plat.h>
 #else
@@ -43,7 +62,7 @@
 #include <linux/exynos-pci-ctrl.h>
 #endif /* CONFIG_SOC_GOOGLE */
 
-#ifdef DHD_COREDUMP
+#if defined(DHD_COREDUMP) && (LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0))
 #include <linux/platform_data/sscoredump.h>
 #endif /* DHD_COREDUMP */
 
@@ -51,6 +70,9 @@
 #if defined(CONFIG_SOC_GOOGLE)
 #define EXYNOS_PCIE_DEVICE_ID 0xecec
 #define EXYNOS_PCIE_CH_NUM 0
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0))
+#define EXYNOS_PCIE_DEVICE_ID 0xecec
+#define EXYNOS_PCIE_CH_NUM 1
 #else
 #error "Not supported platform"
 #endif /* CONFIG_SOC_GOOGLE */
@@ -88,6 +110,31 @@ static int pcie_ch_num = EXYNOS_PCIE_CH_NUM;
 extern int exynos_pcie_pm_resume(int);
 extern void exynos_pcie_pm_suspend(int);
 extern int exynos_pcie_l1_exit(int ch_num);
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0))
+/* shortcut: mainline pcie-zumapro RC exposes no runtime PM/notify service; the
+ * ch1 link is trained at boot and the EP is statically enumerated, so these are
+ * no-ops. Upgrade when the RC driver gains suspend/resume and link-down events. */
+#define EXYNOS_PCIE_EVENT_LINKDOWN	BIT(1)
+#define EXYNOS_PCIE_EVENT_CPL_TIMEOUT	BIT(2)
+#define EXYNOS_PCIE_TRIGGER_CALLBACK	0
+struct exynos_pcie_notify {
+	int event;
+	void *user;
+	void *data;
+};
+struct exynos_pcie_register_event {
+	u32 events;
+	void *user;
+	int mode;
+	void (*callback)(struct exynos_pcie_notify *notify);
+};
+static inline int exynos_pcie_pm_resume(int ch) { (void)ch; return 0; }
+static inline void exynos_pcie_pm_suspend(int ch) { (void)ch; }
+static inline int exynos_pcie_l1_exit(int ch) { (void)ch; return 0; }
+static inline int exynos_pcie_register_event(struct exynos_pcie_register_event *e)
+{ (void)e; return 0; }
+static inline int exynos_pcie_deregister_event(struct exynos_pcie_register_event *e)
+{ (void)e; return 0; }
 #endif /* CONFIG_SOC_GOOGLE */
 
 #ifdef EXYNOS_PCIE_DEBUG
@@ -104,6 +151,7 @@ extern void exynos_pcie_set_skip_config(int ch_num, bool val);
 #ifdef DHD_COREDUMP
 #define DEVICE_NAME "wlan"
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0))
 static void sscd_release(struct device *dev);
 static struct sscd_platform_data sscd_pdata;
 static struct platform_device sscd_dev = {
@@ -120,11 +168,13 @@ static void sscd_release(struct device *dev)
 {
 	DHD_INFO(("%s: enter\n", __FUNCTION__));
 }
+#endif /* < 6.15 */
 
 /* trigger coredump */
 static int
 dhd_set_coredump(const char *buf, int buf_len, const char *info)
 {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0))
 	struct sscd_platform_data *pdata = dev_get_platdata(&sscd_dev.dev);
 	struct sscd_segment seg;
 
@@ -134,6 +184,11 @@ dhd_set_coredump(const char *buf, int buf_len, const char *info)
 		seg.size = buf_len;
 		pdata->sscd_report(&sscd_dev, &seg, 1, 0, info);
 	}
+#else
+	/* shortcut: no sscoredump uplink on mainline; core still captures the dump.
+	 * Upgrade when a mainline crash-report sink is wired. */
+	(void)buf; (void)buf_len; (void)info;
+#endif
 	return 0;
 }
 #endif /* DHD_COREDUMP */
@@ -550,42 +605,54 @@ dhd_wifi_init_gpio(void)
 
 	wlan_reg_on = of_get_named_gpio(root_node, WIFI_WL_REG_ON_PROPNAME, 0);
 	if (!gpio_is_valid(wlan_reg_on)) {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0))
+		/* shortcut: on mainline the pcie-zumapro RC already owns WL_REG_ON
+		 * (gph3-4, driven high at boot to train the link), so this resolve
+		 * returns -EBUSY. The chip is already powered; skip DHD-side reg_on
+		 * management. Upgrade when reg_on ownership is handed to DHD. */
+		DHD_ERROR(("WL_REG_ON held by RC (%d); skip DHD reg_on mgmt\n",
+			wlan_reg_on));
+		wlan_reg_on = -1;
+#else
 		DHD_ERROR(("Invalid gpio pin : %d\n", wlan_reg_on));
 		return -ENODEV;
+#endif
 	}
 
-	/* ========== WLAN_PWR_EN ============ */
-	DHD_INFO(("%s: gpio_wlan_power : %d\n", __FUNCTION__, wlan_reg_on));
+	if (gpio_is_valid(wlan_reg_on)) {
+		/* ========== WLAN_PWR_EN ============ */
+		DHD_INFO(("%s: gpio_wlan_power : %d\n", __FUNCTION__, wlan_reg_on));
 
-	/*
-	 * For reg_on, gpio_request will fail if the gpio is configured to output-high
-	 * in the dts using gpio-hog, so do not return error for failure.
-	 */
-	if (gpio_request_one(wlan_reg_on, GPIOF_OUT_INIT_HIGH, "WL_REG_ON")) {
-		DHD_ERROR(("%s: Failed to request gpio %d for WL_REG_ON, "
-			"might have configured in the dts\n",
-			__FUNCTION__, wlan_reg_on));
-	} else {
-		DHD_ERROR(("%s: gpio_request WL_REG_ON done - WLAN_EN: GPIO %d\n",
-			__FUNCTION__, wlan_reg_on));
-	}
-
-	gpio_reg_on_val = gpio_get_value(wlan_reg_on);
-	DHD_INFO(("%s: Initial WL_REG_ON: [%d]\n",
-		__FUNCTION__, gpio_get_value(wlan_reg_on)));
-
-	if (gpio_reg_on_val == 0) {
-		DHD_INFO(("%s: WL_REG_ON is LOW, drive it HIGH\n", __FUNCTION__));
-		if (gpio_direction_output(wlan_reg_on, 1)) {
-			DHD_ERROR(("%s: WL_REG_ON is failed to pull up\n", __FUNCTION__));
-			return -EIO;
+		/*
+		 * For reg_on, gpio_request will fail if the gpio is configured to output-high
+		 * in the dts using gpio-hog, so do not return error for failure.
+		 */
+		if (gpio_request_one(wlan_reg_on, GPIOF_OUT_INIT_HIGH, "WL_REG_ON")) {
+			DHD_ERROR(("%s: Failed to request gpio %d for WL_REG_ON, "
+				"might have configured in the dts\n",
+				__FUNCTION__, wlan_reg_on));
+		} else {
+			DHD_ERROR(("%s: gpio_request WL_REG_ON done - WLAN_EN: GPIO %d\n",
+				__FUNCTION__, wlan_reg_on));
 		}
+
+		gpio_reg_on_val = gpio_get_value(wlan_reg_on);
+		DHD_INFO(("%s: Initial WL_REG_ON: [%d]\n",
+			__FUNCTION__, gpio_get_value(wlan_reg_on)));
+
+		if (gpio_reg_on_val == 0) {
+			DHD_INFO(("%s: WL_REG_ON is LOW, drive it HIGH\n", __FUNCTION__));
+			if (gpio_direction_output(wlan_reg_on, 1)) {
+				DHD_ERROR(("%s: WL_REG_ON is failed to pull up\n", __FUNCTION__));
+				return -EIO;
+			}
+		}
+
+		DHD_PRINT(("%s: WL_REG_ON is pulled up\n", __FUNCTION__));
+
+		/* Wait for WIFI_TURNON_DELAY due to power stability */
+		msleep(WIFI_TURNON_DELAY);
 	}
-
-	DHD_PRINT(("%s: WL_REG_ON is pulled up\n", __FUNCTION__));
-
-	/* Wait for WIFI_TURNON_DELAY due to power stability */
-	msleep(WIFI_TURNON_DELAY);
 
 #ifdef CONFIG_BCMDHD_OOB_HOST_WAKE
 	/* ========== WLAN_HOST_WAKE ============ */
@@ -596,18 +663,28 @@ dhd_wifi_init_gpio(void)
 	if (gpio_request_one(wlan_host_wake_up, GPIOF_IN, "WLAN_HOST_WAKE")) {
 		DHD_ERROR(("%s: Failed to request gpio %d for WLAN_HOST_WAKE\n",
 			__FUNCTION__, wlan_host_wake_up));
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0))
+		/* shortcut: continue without OOB host-wake (in-band/MSI still works);
+		 * forfeits wake-from-suspend. Upgrade once the host-wake GPIO/IRQ is
+		 * confirmed on mainline. */
+		wlan_host_wake_up = -1;
+		wlan_host_wake_irq = 0;
+#else
 			return -ENODEV;
+#endif
 	} else {
 		DHD_ERROR(("%s: gpio_request WLAN_HOST_WAKE done"
 			" - WLAN_HOST_WAKE: GPIO %d\n",
 			__FUNCTION__, wlan_host_wake_up));
 	}
 
-	if (gpio_direction_input(wlan_host_wake_up)) {
-		DHD_ERROR(("%s: Failed to set WL_HOST_WAKE gpio direction\n", __FUNCTION__));
-	}
+	if (gpio_is_valid(wlan_host_wake_up)) {
+		if (gpio_direction_input(wlan_host_wake_up)) {
+			DHD_ERROR(("%s: Failed to set WL_HOST_WAKE gpio direction\n", __FUNCTION__));
+		}
 
-	wlan_host_wake_irq = gpio_to_irq(wlan_host_wake_up);
+		wlan_host_wake_irq = gpio_to_irq(wlan_host_wake_up);
+	}
 #endif /* CONFIG_BCMDHD_OOB_HOST_WAKE */
 	return 0;
 }
@@ -618,6 +695,12 @@ dhd_wlan_power(int onoff)
 	DHD_INFO(("------------------------------------------------\n"));
 	DHD_INFO(("------------------------------------------------\n"));
 	DHD_INFO(("%s Enter: power %s\n", __func__, onoff ? "on" : "off"));
+
+	if (!gpio_is_valid(wlan_reg_on)) {
+		/* shortcut: WL_REG_ON owned by the RC on mainline; power is managed
+		 * there. See dhd_wifi_init_gpio(). */
+		return 0;
+	}
 
 	if (onoff) {
 		if (gpio_direction_output(wlan_reg_on, 1)) {
@@ -682,9 +765,11 @@ dhd_wlan_set_carddetect(int val)
 	return 0;
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0))
 #include <linux/exynos-pci-noti.h>
 extern int exynos_pcie_register_event(struct exynos_pcie_register_event *reg);
 extern int exynos_pcie_deregister_event(struct exynos_pcie_register_event *reg);
+#endif
 
 #include <dhd_plat.h>
 
@@ -907,7 +992,7 @@ dhd_wlan_init(void)
 	}
 #endif /* CONFIG_BROADCOM_WIFI_RESERVED_MEM */
 
-#ifdef DHD_COREDUMP
+#if defined(DHD_COREDUMP) && (LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0))
 	platform_device_register(&sscd_dev);
 #endif /* DHD_COREDUMP */
 
@@ -945,7 +1030,7 @@ dhd_wlan_deinit(void)
 		gpio_free(wlan_reg_on);
 	}
 
-#ifdef DHD_COREDUMP
+#if defined(DHD_COREDUMP) && (LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0))
 	platform_device_unregister(&sscd_dev);
 #endif /* DHD_COREDUMP */
 

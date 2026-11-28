@@ -4504,9 +4504,14 @@ dhd_msgbuf_agg_h2d_db_timer_init(dhd_pub_t *dhd)
 	agg_h2d_db_info_t *agg_db_info = &prot->agg_h2d_db_info;
 
 	agg_db_info->dhd = dhd;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0))
+	hrtimer_setup(&agg_db_info->timer, &dhd_msgbuf_agg_h2d_db_timer_fn,
+		CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+#else
 	hrtimer_init(&agg_db_info->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	/* The timer function will run from ISR context, ensure no spin_lock_bh are used */
 	agg_db_info->timer.function = &dhd_msgbuf_agg_h2d_db_timer_fn;
+#endif
 	agg_db_info->init = TRUE;
 	agg_db_info->timer_db_cnt = 0;
 	agg_db_info->direct_db_cnt = 0;

@@ -57,7 +57,8 @@ typedef struct cis_tuple_addrs {
 cis_tuple_addr_t cis_tuple_addr_ranges[] = {
 	{0x4375, 0x18011120, 0x18011177},
 	{0x4389, 0x18011058, 0x180110AF},
-	{0x4398, 0x1801115C, 0x180111B3}
+	{0x4398, 0x1801115C, 0x180111B3},
+	{0x4390, 0x1801115C, 0x180111B3}
 };
 #define CIS_TUPLE_START_ADDR(chipidx) (cis_tuple_addr_ranges[(chipidx)].start_addr)
 #define CIS_TUPLE_END_ADDR(chipidx) (cis_tuple_addr_ranges[(chipidx)].end_addr)
@@ -100,7 +101,7 @@ typedef struct chip_rev_table {
 chip_rev_table_t chip_revs[] = {
 	{0x4383, {"a0", "a1", "a3", "\0", "\0", "\0", "\0", "\0", "\0", "\0"}},
 	{0x4398, {"a0", "b0", "c0", "d0", "\0", "\0", "\0", "\0", "\0", "\0"}},
-	{0x4390, {"a0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0"}},
+	{0x4390, {"a0", "\0", "b0", "\0", "\0", "b1", "\0", "\0", "\0", "\0"}},
 	/* 4389 - not yet supported for now */
 	{0x4389, {"\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0"}},
 };
@@ -147,9 +148,23 @@ vid_info_t vid_naming_table_4398[] = {
 
 vid_info_t vid_naming_table_4390[] = {
 	/* 4390a0 */
-	{ 3, { 0x10, 0x63, }, { "_USI_G6BB_6310_V10" } },
+	{ 3, { 0x10, 0x63, }, { "_USI_G6BB_6311_V11" } },
 	{ 3, { 0x11, 0x63, }, { "_USI_G6BB_6311_V11" } },
+	{ 3, { 0x12, 0x63, }, { "_USI_G6BB_6313_V13" } },
 	{ 3, { 0x13, 0x63, }, { "_USI_G6BB_6313_V13" } },
+	{ 3, { 0x20, 0x63, }, { "_USI_G6BB_6321_V21" } },
+	{ 3, { 0x21, 0x63, }, { "_USI_G6BB_6321_V21" } },
+
+	/* 4390b0 */
+	{ 3, { 0x22, 0x63, }, { "_USI_G6BB_6323_V23" } },
+	{ 3, { 0x23, 0x63, }, { "_USI_G6BB_6323_V23" } },
+	{ 3, { 0x24, 0x63, }, { "_USI_G6BB_6325_V25" } },
+	{ 3, { 0x25, 0x63, }, { "_USI_G6BB_6325_V25" } },
+
+	/* 4390b1 */
+	{ 3, { 0x26, 0x63, }, { "_USI_G6BB_6327_V27" } },
+	{ 3, { 0x27, 0x63, }, { "_USI_G6BB_6327_V27" } },
+	{ 3, { 0x11, 0x73, }, { "_USI_G6BB_6327_V27" } },
 };
 
 #ifdef DHD_USE_CISINFO

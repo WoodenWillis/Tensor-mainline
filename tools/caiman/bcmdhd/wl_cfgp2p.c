@@ -1443,7 +1443,8 @@ wl_cfgp2p_vndr_ie(struct bcm_cfg80211 *cfg, u8 *iebuf, s32 pktflag,
 	data_offset =
 		(u8*)&(hdr->vndr_ie_buffer.vndr_ie_list->vndr_ie_data.data[0]) -
 		(u8*)hdr;
-	memcpy(iebuf + data_offset, data, datalen);
+	if (datalen > 0)
+		memcpy(iebuf + data_offset, data, datalen);
 	return data_offset + datalen;
 
 }

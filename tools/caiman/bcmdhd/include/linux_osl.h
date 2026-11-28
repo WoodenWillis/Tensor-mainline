@@ -392,10 +392,13 @@ uint64 osl_getcycles(void);
 
 /* RTC format %02d:%02d:%02d.%06lu, LEN including the trailing null space */
 #define RTC_TIME_BUF_LEN	16u
-#define	printf(fmt, args...)	printk(fmt , ## args)
+#define	printf(fmt, args...)	osl_dprintk(fmt , ## args)
 #define	vprintf(fmt, ap)	vprintk(fmt, ap)
 #include <linux/kernel.h>	/* for vsn/printf's */
 #include <linux/string.h>	/* for mem*, str* */
+extern int osl_dprintk(const char *fmt, ...) __printf(1, 2);
+#undef pr_cont
+#define	pr_cont(fmt, args...)	osl_dprintk(fmt , ## args)
 /* bcopy's: Linux kernel doesn't provide these (anymore) */
 #define	bcopy_hw(src, dst, len)		memcpy((dst), (src), (len))
 #define	bcopy_hw_async(src, dst, len)	memcpy((dst), (src), (len))

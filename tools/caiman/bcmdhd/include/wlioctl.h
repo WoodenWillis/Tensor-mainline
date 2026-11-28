@@ -1491,6 +1491,17 @@ typedef struct wl_assoc_params_v2 {
 	chanspec_t			chanspec_list[];	/**< list of chanspecs */
 } wl_assoc_params_v2_t;
 
+typedef struct wl_assoc_params_v3 {
+	uint16				version;
+	uint16				flags;
+	struct ether_addr		bssid;
+	uint16				bssid_cnt;
+	struct ether_addr		mld_addr;
+	uint8				pad[2];
+	int32				chanspec_num;
+	chanspec_t			chanspec_list[];
+} wl_assoc_params_v3_t;
+
 /** Assoc params flags */
 #define ASSOC_HINT_BSSID_PRESENT		0x0001u
 /* FW to delete PMKSA of bssid listed in assoc params */
@@ -1502,6 +1513,7 @@ typedef struct wl_assoc_params_v2 {
 #define WL_ASSOC_PARAMS_FIXED_SIZE      OFFSETOF(wl_assoc_params_t, chanspec_list)
 #define WL_ASSOC_PARAMS_FIXED_SIZE_V1   OFFSETOF(wl_assoc_params_v1_t, chanspec_list)
 #define WL_ASSOC_PARAMS_FIXED_SIZE_V2   OFFSETOF(wl_assoc_params_v2_t, chanspec_list)
+#define WL_ASSOC_PARAMS_FIXED_SIZE_V3   OFFSETOF(wl_assoc_params_v3_t, chanspec_list)
 
 #define WL_ASSOC_ML_SCAN_MODE_MAX_V1	2u	/* Max ml scan mode */
 #define WL_ASSOC_ML_SCAN_MODE_0		0u	/* scan ML channels if found in rnr */
@@ -1560,6 +1572,7 @@ typedef wl_assoc_params_v2_t wl_join_assoc_params_v2_t;
 #define WL_JOIN_ASSOC_PARAMS_FIXED_SIZE	WL_ASSOC_PARAMS_FIXED_SIZE
 #define WL_JOIN_ASSOC_PARAMS_FIXED_SIZE_V1 WL_ASSOC_PARAMS_FIXED_SIZE_V1
 #define WL_JOIN_ASSOC_PARAMS_FIXED_SIZE_V2 WL_ASSOC_PARAMS_FIXED_SIZE_V2
+#define WL_JOIN_ASSOC_PARAMS_FIXED_SIZE_V3 WL_ASSOC_PARAMS_FIXED_SIZE_V3
 /** used for join with or without a specific bssid and channel list */
 typedef struct wl_join_params {
 	wlc_ssid_t ssid;
@@ -1724,12 +1737,22 @@ typedef struct wl_extjoin_params_v2 {
 						*/
 } wl_extjoin_params_v2_t;
 
+typedef struct wl_extjoin_params_v3 {
+	uint16				version;
+	uint16				PAD;
+	wlc_ssid_t			ssid;
+	wl_join_scan_params_t		scan;
+	wl_assoc_params_v3_t		assoc;
+} wl_extjoin_params_v3_t;
+
 #define WL_EXTJOIN_PARAMS_FIXED_SIZE	(OFFSETOF(wl_extjoin_params_t, assoc) + \
 					 WL_JOIN_ASSOC_PARAMS_FIXED_SIZE)
 #define WL_EXTJOIN_PARAMS_FIXED_SIZE_V1    (OFFSETOF(wl_extjoin_params_v1_t, assoc) + \
 		                         WL_JOIN_ASSOC_PARAMS_FIXED_SIZE_V1)
 #define WL_EXTJOIN_PARAMS_FIXED_SIZE_V2    (OFFSETOF(wl_extjoin_params_v2_t, assoc) + \
 		                         WL_JOIN_ASSOC_PARAMS_FIXED_SIZE_V2)
+#define WL_EXTJOIN_PARAMS_FIXED_SIZE_V3    (OFFSETOF(wl_extjoin_params_v3_t, assoc) + \
+		                         WL_JOIN_ASSOC_PARAMS_FIXED_SIZE_V3)
 #define ANT_SELCFG_MAX		4	/**< max number of antenna configurations */
 #define MAX_STREAMS_SUPPORTED	4	/**< max number of streams supported */
 typedef struct {
@@ -19735,6 +19758,7 @@ typedef struct wl_scan_version {
 #define WL_JOIN_VERSION_MAJOR_0	0u
 #define WL_JOIN_VERSION_MAJOR_1	1u
 #define WL_JOIN_VERSION_MAJOR_2	2u
+#define WL_JOIN_VERSION_MAJOR_3	3u
 /** join interface version */
 typedef struct wl_join_version_v1 {
 	uint16	version;		/**< version of the structure */

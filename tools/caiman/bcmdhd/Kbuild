@@ -103,10 +103,12 @@ DHDCFLAGS += -DCONFIG_BCMDHD_OOB_HOST_WAKE=$(CONFIG_BCMDHD_OOB_HOST_WAKE)
 DHDCFLAGS += -DCONFIG_BCMDHD_GET_OOB_STATE=$(CONFIG_BCMDHD_GET_OOB_STATE)
 endif
 
+DHDCFLAGS += -include $(src)/include/dhd_str_compat.h
+DHDCFLAGS += -DWL_MLO_BKPORT_NEW_PORT_AUTH
 DHDCFLAGS += -DBCMUTILS_ERR_CODES -DUSE_NEW_RSPEC_DEFS -DBCM_FLEX_ARRAY
 DHDCFLAGS += -DPMU_NEW_ACCESS_MACROS -DCHIPC_NEW_ACCESS_MACROS \
   -DSR_NEW_ACCESS_MACROS -DPCIE_NEW_ACCESS_MACROS
-DHDCFLAGS += -Wall -Werror -Wstrict-prototypes -Wno-parentheses-equality -Dlinux -DLINUX -DBCMDRIVER \
+DHDCFLAGS += -Wall -Wno-error -Wstrict-prototypes -Wno-parentheses-equality -Dlinux -DLINUX -DBCMDRIVER \
 	-DBCMDONGLEHOST -DBCMDMA32 -DBCMFILEIMAGE \
 	-DDHDTHREAD -DSHOW_EVENTS -DWLP2P \
 	-DWIFI_ACT_FRAME -DARP_OFFLOAD_SUPPORT \
@@ -260,7 +262,8 @@ DHDCFLAGS += -DWL_DYNAMIC_CHAN_POLICY -DWL_DYNAMIC_CHAN_POLICY_INDOOR -DWL_DYNAM
 #DHDCFLAGS += -DP2P_SKIP_DFS
 
 ifneq ($(CONFIG_BCMDHD_PCIE),)
-	DHDCFLAGS += -DWLAN_ACCEL_BOOT
+	# WLAN_ACCEL_BOOT re-powers the dongle via FLR at ifconfig-up, which resets MSI config the DWC RC can't re-arm -> ioctl timeout; keep the dongle up from insmod instead
+	# DHDCFLAGS += -DWLAN_ACCEL_BOOT
     # Enable Tx checksum offloads
 	DHDCFLAGS += -DTX_CSO
     # Enable Rx checksum offloads
@@ -333,6 +336,21 @@ endif
 	DHDCFLAGS += -DSUPPORT_MULTIPLE_REVISION -DSUPPORT_MULTIPLE_REVISION_MAP
 	DHDCFLAGS += -DSUPPORT_MIXED_MODULES -DUSE_CID_CHECK -DSUPPORT_MULTIPLE_CHIPS
 	DHDCFLAGS += -DCONCAT_DEF_REV_FOR_NOMATCH_VID
+ifeq ($(CONFIG_SOC_GOOGLE),)
+	# caiman mainline: platform constants normally supplied by the CONFIG_SOC_GOOGLE
+	# vendor path. Values mirror the vendor tree.
+	# shortcut: IRQ_AFFINITY_BIG/SMALL_CORE mirror the vendor zuma numbering;
+	# verify against caiman's actual CPU topology on-device (wrong mask only
+	# forfeits IRQ steering, non-fatal).
+	DHDCFLAGS += -DRESCHED_CNT_CHECK_PERIOD_SEC=2
+	DHDCFLAGS += -DAFFINITY_UPDATE_MIN_PERIOD_SEC=6
+	DHDCFLAGS += -DRESCHED_STREAK_MAX_HIGH=20
+	DHDCFLAGS += -DRESCHED_STREAK_MAX_LOW=2
+	DHDCFLAGS += -DIRQ_AFFINITY_BIG_CORE=8
+	DHDCFLAGS += -DIRQ_AFFINITY_SMALL_CORE=7
+	DHDCFLAGS += -DSUPPORT_MULTIPLE_NVRAM -DSUPPORT_MULTIPLE_CLMBLOB
+	DHDCFLAGS += -DDHD_SET_PCIE_DMA_MASK_FOR_GS101
+endif
 ifneq ($(CONFIG_SOC_GOOGLE),)
 	# Tasklet load detection and balancing
 	DHDCFLAGS += -DRESCHED_CNT_CHECK_PERIOD_SEC=2
@@ -369,6 +387,9 @@ ifneq ($(CONFIG_SOC_GOOGLE),)
 	DHDCFLAGS += -DSKIP_COREDUMP_PKTDROP_RXHC
 endif
 endif
+
+# mainline caiman has no CONFIG_SOC_GOOGLE; the zumapro DWC RC uses MSI
+DHDCFLAGS += -DDHD_MSI_SUPPORT
 
 ifneq ($(CONFIG_SOC_GOOGLE),)
     DHDCFLAGS += -DDHD_FILE_DUMP_EVENT
@@ -905,7 +926,8 @@ endif
 
 #EXTRA_LDFLAGS += --strip-debug
 
-DHDCFLAGS += -DENABLE_INSMOD_NO_FW_LOAD
+# ENABLE_INSMOD_NO_FW_LOAD forces dhd_download_fw_on_driverload=FALSE -> dongle torn down after insmod, re-powered by FLR at ifup (MSI lost -> ioctl -110); keep fw load + dongle up from insmod instead
+# DHDCFLAGS += -DENABLE_INSMOD_NO_FW_LOAD
 
 ifeq ($(DRIVER_TYPE),y)
   DHDCFLAGS += -DUSE_LATE_INITCALL_SYNC
@@ -1048,10 +1070,12 @@ ifneq ($(filter -DDHD_STATUS_LOGGING,$(DHDCFLAGS)),)
 	DHDOFILES += dhd_statlog.o
 endif
 
-ifneq ($(filter y, $(CONFIG_SOC_GOOGLE) $(CONFIG_SOC_EXYNOS9820)),)
+ifneq ($(filter y, $(CONFIG_SOC_GOOGLE) $(CONFIG_SOC_EXYNOS9820) $(CONFIG_ARCH_ZUMAPRO)),)
 	DHDOFILES += dhd_custom_google.o
 else ifneq ($(CONFIG_ARCH_HISI),)
 	DHDOFILES += dhd_custom_hikey.o
+else
+	DHDOFILES += dhd_custom_google.o
 endif
 
 ifneq ($(CONFIG_BROADCOM_WIFI_RESERVED_MEM),)

@@ -21,6 +21,7 @@
  * <<Broadcom-WL-IPTag/Dual:>>
  */
 
+#include <linux/vmalloc.h>
 #include <typedefs.h>
 #include <osl.h>
 #include <bcmutils.h>

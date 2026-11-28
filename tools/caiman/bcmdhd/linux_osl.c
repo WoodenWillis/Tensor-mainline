@@ -38,6 +38,7 @@
 #include <bcmutils.h>
 #include <linux/delay.h>
 #include <linux/vmalloc.h>
+#include <linux/sched/clock.h>
 #include <pcicfg.h>
 
 #if defined(BCMASSERT_LOG) && !defined(OEM_ANDROID)
@@ -50,6 +51,22 @@
 #include <bcmutils.h>
 #endif /* BCM_OBJECT_TRACE */
 #include "linux_osl_priv.h"
+
+int
+osl_dprintk(const char *fmt, ...)
+{
+	struct va_format vaf;
+	va_list args;
+	int ret;
+
+	va_start(args, fmt);
+	vaf.fmt = fmt;
+	vaf.va = &args;
+	ret = printk(KERN_DEBUG KERN_CONT "%pV", &vaf);
+	va_end(args);
+
+	return ret;
+}
 
 #define PCI_CFG_RETRY		10	/* PR15065: retry count for pci cfg accesses */
 
@@ -2130,7 +2147,7 @@ osl_spin_lock(void *lock)
 	if (lock) {
 #ifdef DHD_USE_SPIN_LOCK_BH
 		/* Calling spin_lock_bh with both irq and non-irq context will lead to deadlock */
-		ASSERT(!in_irq());
+		ASSERT(!in_hardirq());
 		spin_lock_bh((spinlock_t *)lock);
 #else
 		spin_lock_irqsave((spinlock_t *)lock, flags);
@@ -2146,7 +2163,7 @@ osl_spin_unlock(void *lock, unsigned long flags)
 	if (lock) {
 #ifdef DHD_USE_SPIN_LOCK_BH
 		/* Calling spin_lock_bh with both irq and non-irq context will lead to deadlock */
-		ASSERT(!in_irq());
+		ASSERT(!in_hardirq());
 		spin_unlock_bh((spinlock_t *)lock);
 #else
 		spin_unlock_irqrestore((spinlock_t *)lock, flags);
@@ -2179,7 +2196,7 @@ osl_spin_lock_bh(void *lock)
 
 	if (lock) {
 		/* Calling spin_lock_bh with both irq and non-irq context will lead to deadlock */
-		ASSERT(!in_irq());
+		ASSERT(!in_hardirq());
 		spin_lock_bh((spinlock_t *)lock);
 	}
 
@@ -2191,7 +2208,7 @@ osl_spin_unlock_bh(void *lock, unsigned long flags)
 {
 	if (lock) {
 		/* Calling spin_lock_bh with both irq and non-irq context will lead to deadlock */
-		ASSERT(!in_irq());
+		ASSERT(!in_hardirq());
 		spin_unlock_bh((spinlock_t *)lock);
 	}
 }
@@ -2250,7 +2267,7 @@ osl_dma_lock(osl_t *osh)
 	 * Please refer to the __local_bh_enable_ip() function
 	 * in kernel/softirq.c to understand the condtion.
 	 */
-	if (likely(in_irq() || irqs_disabled())) {
+	if (likely(in_hardirq() || irqs_disabled())) {
 		spin_lock(&osh->dma_lock);
 	} else {
 		spin_lock_bh(&osh->dma_lock);

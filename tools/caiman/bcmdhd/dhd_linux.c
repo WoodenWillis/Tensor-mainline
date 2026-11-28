@@ -58,7 +58,7 @@
 #endif /* ENABLE_ADAPTIVE_SCHED */
 #include <linux/rtc.h>
 #include <asm/uaccess.h>
-#include <asm/unaligned.h>
+#include <linux/unaligned.h>
 #include <dhd_linux_priv.h>
 
 #ifdef DHD_SPMI
@@ -502,8 +502,8 @@ uint dhd_download_fw_on_driverload = TRUE;
 /* Definitions to provide path to the firmware and nvram
  * example nvram_path[MOD_PARAM_PATHLEN]="/projects/wlan/nvram.txt"
  */
-char firmware_path[MOD_PARAM_PATHLEN];
-char nvram_path[MOD_PARAM_PATHLEN];
+char firmware_path[MOD_PARAM_PATHLEN] = "fw_bcmdhd.bin";
+char nvram_path[MOD_PARAM_PATHLEN] = "bcmdhd.cal";
 char clm_path[MOD_PARAM_PATHLEN];
 char txcap_path[MOD_PARAM_PATHLEN];
 char signature_path[MOD_PARAM_PATHLEN];
@@ -2776,7 +2776,9 @@ dhd_net2idx(dhd_info_t *dhd, struct net_device *net)
 	}
 
 	while (i < DHD_MAX_IFS) {
-		if (dhd->iflist[i] && dhd->iflist[i]->net && (dhd->iflist[i]->net == net))
+		/* TODO(will): iflist[] slot can hold a stale/garbage pointer under an if-table race; validate before deref */
+		if (dhd->iflist[i] && virt_addr_valid(dhd->iflist[i]) &&
+			dhd->iflist[i]->net && (dhd->iflist[i]->net == net))
 			return i;
 		i++;
 	}
@@ -5746,7 +5748,6 @@ dhd_add_monitor_if(dhd_info_t *dhd)
 #ifdef HOST_RADIOTAP_CONV
 	dhd_pub_t *dhdp = (dhd_pub_t *)&dhd->pub;
 #endif /* HOST_RADIOTAP_CONV */
-	uint32 scan_suppress = FALSE;
 	int ret = BCME_OK;
 	dhd_mon_dev_priv_t *dev_priv;
 
@@ -5813,13 +5814,7 @@ dhd_add_monitor_if(dhd_info_t *dhd)
 		DHD_STOP_RPM_TIMER(&dhd->pub);
 		DHD_PRINT(("%s : disable runtime PM in monitor mode\n", __FUNCTION__));
 #endif /* DHD_PCIE_RUNTIME_PM */
-		scan_suppress = TRUE;
-		/* Set the SCAN SUPPRESS Flag in the firmware to disable scan in Monitor mode */
-		ret = dhd_iovar(&dhd->pub, 0, "scansuppress", (char *)&scan_suppress,
-			sizeof(scan_suppress), NULL, 0, TRUE);
-		if (ret < 0) {
-			DHD_ERROR(("%s: scansuppress set failed, ret=%d\n", __FUNCTION__, ret));
-		}
+		/* TODO(will): scansuppress dropped here, it blocked every STA scan with BCME_EPERM */
 	}
 
 #ifdef HOST_RADIOTAP_CONV
@@ -23573,7 +23568,11 @@ dhd_print_kirqstats(dhd_pub_t *dhd, unsigned int irq_num)
 	bcm_bprintf(&strbuf, "dhd irq %u:", irq_num);
 	for_each_online_cpu(i)
 		bcm_bprintf(&strbuf, "%10u ",
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0))
+			desc->kstat_irqs ? per_cpu_ptr(desc->kstat_irqs, i)->cnt : 0);
+#else
 			desc->kstat_irqs ? *per_cpu_ptr(desc->kstat_irqs, i) : 0);
+#endif
 	if (desc->irq_data.chip) {
 		if (desc->irq_data.chip->name)
 			bcm_bprintf(&strbuf, " %8s", desc->irq_data.chip->name);
