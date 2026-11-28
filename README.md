@@ -4,7 +4,9 @@ Mainline Linux kernel bring-up for the **Google Pixel 9 Pro ("caiman")**, built 
 
 This is a hobby port on top of upstream Linux (currently based on **v7.4-rc3**). The goal is a phone that boots a normal Linux userland with display, touch, storage, USB and WiFi, using upstream drivers where they exist and small, upstreamable drivers where they don't. If it goes well, parts of it may be sent upstream.
 
-> **Status: experimental.** Expect rough edges, debug knobs and things that change from week to week. Flashing custom kernels can leave your phone unbootable until you reflash a stock image. You do this at your own risk.
+> **Status:** Expect rough edges, debug knobs and things that change from week to week.
+
+Flashing custom kernels can leave your phone unbootable until you reflash a stock image. You do this at your own risk.
 
 ## Branches
 
@@ -27,10 +29,10 @@ This is a hobby port on top of upstream Linux (currently based on **v7.4-rc3**).
 | GPU (Mali-G715) | 📱 Working | Panthor|
 | Touchscreen (Synaptics S3908) | 👇 Working | TouchComm SPI driver |
 | USB | 📲 Working | Peripheral mode only, with USB gadget networking |
-| Battery fuel gauge (MAX77779) | 🔋 Working | Read only |
+| Battery fuel gauge (MAX77779) | 🔋 Working |  |
 | PCIe | 🚄 Working | A new Tensor G4 root complex driver. Runtime suspend and link-down recovery are not done yet |
 | WiFi (BCM4390) | 🛜 Working | Uses Broadcom's out-of-tree `bcmdhd` driver. Supports monitor mode. |
-| Modem, audio, cameras, charging, Bluetooth, NFC | ❌ Not started | |
+| Modem, audio, cameras, Bluetooth, NFC | 🛠️ In Progress | |
 
 ## Building
 
