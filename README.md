@@ -24,7 +24,7 @@ This is a hobby port on top of upstream Linux (currently based on **v7.4-rc3**).
 | Thermal | 🌡 Working | TMU zones for CPU and GPU |
 | UFS storage | 💾 Working | |
 | Display | 📱 Working | zumapro_decon |
-| GPU (Mali-G715) | 🟡 Probes | Panthor|
+| GPU (Mali-G715) | 📱 Working | Panthor|
 | Touchscreen (Synaptics S3908) | 👇 Working | TouchComm SPI driver |
 | USB | 📲 Working | Peripheral mode only, with USB gadget networking |
 | Battery fuel gauge (MAX77779) | 🔋 Working | Read only |
